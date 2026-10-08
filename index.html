@@ -4,12 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>🦈 Shark-Gym - Captain Youssef Edition Pro</title>
+
 <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
 <div id="login-screen">
   <div class="login-box">
+
     <div class="login-logo">
       <span class="shark-icon">🦈</span>
       <h1>SHARK GYM</h1>
@@ -18,126 +21,256 @@
 
     <div class="login-field">
       <label>اسم المستخدم</label>
-      <input type="text" id="l-user" placeholder="أدخل اسم المستخدم" autocomplete="off" />
+      <input
+        type="text"
+        id="l-user"
+        placeholder="أدخل اسم المستخدم"
+        autocomplete="off"
+      />
     </div>
 
-    <div class="login-field">
+    <div class="login-field password-field">
       <label>كلمة المرور</label>
-      <input type="password" id="l-pass" placeholder="أدخل كلمة المرور" onkeydown="if(event.key==='Enter') doLogin()" />
+
+      <div class="password-input-wrap">
+        <input
+          type="password"
+          id="l-pass"
+          placeholder="أدخل كلمة المرور"
+          onkeydown="if(event.key==='Enter') doLogin()"
+        />
+
+        <button
+          type="button"
+          class="password-toggle"
+          onclick="toggleLoginPassword()"
+          aria-label="إظهار كلمة المرور"
+          title="إظهار كلمة المرور"
+        >👁️</button>
+      </div>
     </div>
 
-    <button class="login-btn" onclick="doLogin()">🔓 تسجيل الدخول</button>
-    <div class="login-err" id="login-err">❌ اسم المستخدم أو كلمة المرور غير صحيحة!</div>
+    <button class="login-btn" onclick="doLogin()">
+      🔓 تسجيل الدخول
+    </button>
+
+    <div class="login-err" id="login-err">
+      ❌ اسم المستخدم أو كلمة المرور غير صحيحة!
+    </div>
+
   </div>
 </div>
 
+
 <div id="app">
 
+  <!-- TOP BAR -->
   <div class="top-bar">
+
     <div class="top-brand">
-      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+      <button
+        class="menu-toggle"
+        onclick="toggleSidebar()"
+        aria-label="فتح القائمة"
+      >☰</button>
+
       <span class="shark">🦈</span>
+
       <h1>SHARK GYM</h1>
+
       <span>نظام الإدارة المتقدم</span>
+
     </div>
+
 
     <div class="top-right">
+
+      <!-- التاريخ قابل للتعديل -->
       <div class="top-date-time">
-        <span id="top-date"></span>
+
+        <input
+          type="date"
+          id="top-date-input"
+          aria-label="تاريخ النظام"
+          onchange="changeSystemDate(this.value)"
+        />
+
         <span class="top-time" id="top-time"></span>
+
       </div>
 
-      <span class="top-admin" id="top-admin">👤 admin</span>
-      <button class="logout-btn" onclick="doLogout()">🚪 خروج</button>
+      <span class="top-admin" id="top-admin">
+        👤 admin
+      </span>
+
+      <button
+        class="logout-btn"
+        onclick="doLogout()"
+      >🚪 خروج</button>
+
     </div>
+
   </div>
+
 
   <div class="layout">
 
+    <!-- SIDEBAR -->
     <nav class="sidebar" id="main-sidebar">
 
-      <div class="nav-section">الرئيسية</div>
+      <div class="nav-section">
+        الرئيسية
+      </div>
 
-      <button class="nav-item active" onclick="showPage('dashboard',this)">
-        <span class="nav-icon">📊</span> لوحة التحكم
+      <button
+        class="nav-item active"
+        onclick="showPage('dashboard',this)"
+      >
+        <span class="nav-icon">📊</span>
+        لوحة التحكم
       </button>
 
-      <div class="nav-section">الأعضاء واليومية</div>
 
-      <button class="nav-item" onclick="showPage('members',this)">
-        <span class="nav-icon">👥</span> الأعضاء والاشتراكات
+      <div class="nav-section">
+        الأعضاء واليومية
+      </div>
+
+      <button
+        class="nav-item"
+        onclick="showPage('members',this)"
+      >
+        <span class="nav-icon">👥</span>
+        الأعضاء والاشتراكات
       </button>
 
-      <button class="nav-item" onclick="showPage('attendance',this)">
-        <span class="nav-icon">🚪</span> الحضور والانصراف
+      <button
+        class="nav-item"
+        onclick="showPage('attendance',this)"
+      >
+        <span class="nav-icon">🚪</span>
+        الحضور والانصراف
       </button>
 
-      <button class="nav-item" onclick="showPage('days-log',this)">
-        <span class="nav-icon">📅</span> سجل الأيام (اليومية)
+      <button
+        class="nav-item"
+        onclick="showPage('days-log',this)"
+      >
+        <span class="nav-icon">📅</span>
+        سجل الأيام (اليومية)
       </button>
 
-      <div class="nav-section">المالية والإدارة</div>
 
-      <button class="nav-item" onclick="showPage('finance', this)">
-        <span class="nav-icon">📈</span> الحسابات المالية العامة
+      <div class="nav-section">
+        المالية والإدارة
+      </div>
+
+      <button
+        class="nav-item"
+        onclick="showPage('finance', this)"
+      >
+        <span class="nav-icon">📈</span>
+        الحسابات المالية العامة
       </button>
 
-      <button class="nav-item" style="color: var(--gold);" onclick="checkYoussefAuth(this)">
-        <span class="nav-icon">👑</span> قسم كابتن يوسف
+      <button
+        class="nav-item"
+        style="color: var(--gold);"
+        onclick="checkYoussefAuth(this)"
+      >
+        <span class="nav-icon">👑</span>
+        قسم كابتن يوسف
       </button>
 
-      <div class="nav-section">النظام</div>
 
-      <button class="nav-item" onclick="checkSectionAuth('settings', this)">
-        <span class="nav-icon">⚙️</span> الإعدادات
+      <div class="nav-section">
+        النظام
+      </div>
+
+      <button
+        class="nav-item"
+        onclick="checkSectionAuth('settings', this)"
+      >
+        <span class="nav-icon">⚙️</span>
+        الإعدادات
       </button>
 
     </nav>
 
+
+    <!-- MAIN CONTENT -->
     <main class="main-content">
 
-      <!-- DASHBOARD -->
+
+      <!-- ================= DASHBOARD ================= -->
       <div class="page active" id="page-dashboard">
 
         <div class="page-title">
+
           <div class="title-left">
-            <span class="icon">📊</span> لوحة التحكم
+            <span class="icon">📊</span>
+            لوحة التحكم
           </div>
 
-          <button class="btn btn-warn" onclick="finishDayPrompt()">
+          <button
+            class="btn btn-warn"
+            onclick="finishDayPrompt()"
+          >
             🌅 إنهاء اليوم وتصفيره
           </button>
+
         </div>
 
-        <div class="stats-grid" id="dash-stats"></div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div
+          class="stats-grid"
+          id="dash-stats"
+        ></div>
+
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:16px;
+            margin-bottom:16px
+          "
+        >
 
           <div class="card">
+
             <div class="card-title">
               <span>
                 <span class="icon">⚠️</span>
                 اشتراكات تنتهي خلال 7 أيام
+                (تنبيهات الواتساب)
               </span>
             </div>
 
             <div id="dash-expiring"></div>
+
           </div>
 
+
           <div class="card">
+
             <div class="card-title">
               <span>
                 <span class="icon">💳</span>
                 ديون ومبالغ مستحقة
+                (متبقي اشتراكات)
               </span>
             </div>
 
             <div id="dash-debt"></div>
+
           </div>
 
         </div>
 
+
         <div class="card">
+
           <div class="card-title">
             <span>
               <span class="icon">🏃</span>
@@ -146,22 +279,27 @@
           </div>
 
           <div id="dash-present"></div>
+
         </div>
 
       </div>
 
 
-      <!-- MEMBERS -->
+      <!-- ================= MEMBERS ================= -->
       <div class="page" id="page-members">
 
         <div class="page-title">
+
           <div class="title-left">
             <span class="icon">👥</span>
             إدارة الأعضاء والاشتراكات
           </div>
+
         </div>
 
+
         <div class="search-bar">
+
           <input
             type="text"
             id="member-search"
@@ -169,14 +307,22 @@
             oninput="renderMembers()"
           />
 
-          <button class="btn btn-primary" onclick="openAddMember()">
+          <button
+            class="btn btn-primary"
+            onclick="openAddMember()"
+          >
             ➕ إضافة عضو جديد
           </button>
+
         </div>
 
+
         <div class="table-wrap">
+
           <table>
+
             <thead>
+
               <tr>
                 <th>#</th>
                 <th>الاسم</th>
@@ -191,57 +337,84 @@
                 <th>الحالة</th>
                 <th>إجراءات</th>
               </tr>
+
             </thead>
 
             <tbody id="members-table"></tbody>
+
           </table>
+
         </div>
 
       </div>
 
 
-      <!-- ATTENDANCE -->
+      <!-- ================= ATTENDANCE ================= -->
       <div class="page" id="page-attendance">
 
         <div class="page-title">
+
           <div class="title-left">
             <span class="icon">🚪</span>
             الحضور والانصراف اليومي
           </div>
 
-          <button class="btn btn-warn btn-sm" onclick="finishDayPrompt()">
+          <button
+            class="btn btn-warn btn-sm"
+            onclick="finishDayPrompt()"
+          >
             🌅 إنهاء وتصفير اليوم
           </button>
+
         </div>
 
+
         <div class="tab-bar">
-          <button class="tab-btn active" onclick="switchAttTab('members',this)">
+
+          <button
+            class="tab-btn active"
+            onclick="switchAttTab('members',this)"
+          >
             👥 أعضاء الجيم
           </button>
 
-          <button class="tab-btn" onclick="switchAttTab('staff',this)">
+          <button
+            class="tab-btn"
+            onclick="switchAttTab('staff',this)"
+          >
             🏋️ الموظفون والكباتن
           </button>
 
-          <button class="tab-btn" onclick="switchAttTab('log',this)">
+          <button
+            class="tab-btn"
+            onclick="switchAttTab('log',this)"
+          >
             📋 سجل دخول اليوم
           </button>
+
         </div>
+
 
         <div id="att-members-section">
 
           <div class="search-bar">
+
             <input
               type="text"
               id="att-search"
               placeholder="🔍 ابحث عن عضو لتسجيل الدخول..."
               oninput="renderAttMembers()"
             />
+
           </div>
 
+
           <div class="table-wrap">
+
             <table>
+
               <thead>
+
                 <tr>
                   <th>الاسم</th>
                   <th>نوع الاشتراك</th>
@@ -250,19 +423,29 @@
                   <th>وقت الخروج</th>
                   <th>إجراء</th>
                 </tr>
+
               </thead>
 
               <tbody id="att-members-table"></tbody>
+
             </table>
+
           </div>
 
         </div>
 
-        <div id="att-staff-section" style="display:none">
+
+        <div
+          id="att-staff-section"
+          style="display:none"
+        >
 
           <div class="table-wrap">
+
             <table>
+
               <thead>
+
                 <tr>
                   <th>الموظف</th>
                   <th>الوظيفة</th>
@@ -271,19 +454,29 @@
                   <th>وقت الخروج</th>
                   <th>إجراء</th>
                 </tr>
+
               </thead>
 
               <tbody id="att-staff-table"></tbody>
+
             </table>
+
           </div>
 
         </div>
 
-        <div id="att-log-section" style="display:none">
+
+        <div
+          id="att-log-section"
+          style="display:none"
+        >
 
           <div class="card">
+
             <table>
+
               <thead>
+
                 <tr>
                   <th>#</th>
                   <th>الاسم</th>
@@ -292,10 +485,13 @@
                   <th>وقت الخروج</th>
                   <th>المدة</th>
                 </tr>
+
               </thead>
 
               <tbody id="att-log-table"></tbody>
+
             </table>
+
           </div>
 
         </div>
@@ -303,15 +499,18 @@
       </div>
 
 
-      <!-- DAYS LOG -->
+      <!-- ================= DAYS LOG ================= -->
       <div class="page" id="page-days-log">
 
         <div class="page-title">
+
           <div class="title-left">
             <span class="icon">📅</span>
             سجل الأيام (أرشيف اليومية)
           </div>
+
         </div>
+
 
         <div class="search-bar">
 
@@ -324,26 +523,35 @@
 
           <button
             class="btn btn-ghost btn-sm"
-            onclick="document.getElementById('days-log-date-search').value=''; renderDaysLog();"
+            onclick="
+              document.getElementById('days-log-date-search').value='';
+              renderDaysLog();
+            "
           >
             🔄 عرض الكل
           </button>
 
         </div>
 
+
         <div class="card">
 
           <div class="card-title">
+
             <span>
               <span class="icon">📋</span>
               تقارير الأيام التي تم إنهاؤها
             </span>
+
           </div>
+
 
           <div class="table-wrap">
 
             <table>
+
               <thead>
+
                 <tr>
                   <th>التاريخ</th>
                   <th>عدد الحضور</th>
@@ -352,6 +560,7 @@
                   <th>الصافي اليومي</th>
                   <th>التفاصيل والإجراءات</th>
                 </tr>
+
               </thead>
 
               <tbody id="days-log-table"></tbody>
@@ -365,32 +574,49 @@
       </div>
 
 
-      <!-- FINANCE -->
+      <!-- ================= FINANCE ================= -->
       <div class="page" id="page-finance">
 
         <div class="page-title">
+
           <div class="title-left">
             <span class="icon">📈</span>
             الحسابات المالية العامة
           </div>
+
         </div>
 
-        <div class="stats-grid" id="finance-stats"></div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div
+          class="stats-grid"
+          id="finance-stats"
+        ></div>
+
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:16px;
+            margin-bottom:16px
+          "
+        >
 
           <div class="card">
 
             <div class="card-title">
+
               <span>
                 <span class="icon">💵</span>
-                مصادر الإيرادات
+                مصادر الإيرادات (مدفوعات اليوم)
               </span>
+
             </div>
 
             <div id="finance-income"></div>
 
           </div>
+
 
           <div class="card">
 
@@ -398,10 +624,13 @@
 
               <span>
                 <span class="icon">💸</span>
-                المصروفات العامّة
+                المصروفات العامّة (مصاريف اليوم)
               </span>
 
-              <button class="btn btn-sm btn-ghost" onclick="openAddExpense()">
+              <button
+                class="btn btn-sm btn-ghost"
+                onclick="openAddExpense()"
+              >
                 ➕ إضافة مصروف
               </button>
 
@@ -413,14 +642,19 @@
 
         </div>
 
+
         <div class="card">
 
           <div class="card-title">
+
             <span>
               <span class="icon">🔴</span>
               الديون المستحقة من الأعضاء
+              (متبقي اشتراكات)
             </span>
+
           </div>
+
 
           <div class="search-bar">
 
@@ -433,10 +667,13 @@
 
           </div>
 
+
           <div class="table-wrap">
 
             <table>
+
               <thead>
+
                 <tr>
                   <th>اسم العضو</th>
                   <th>الهاتف</th>
@@ -445,6 +682,7 @@
                   <th>المتبقي</th>
                   <th>إجراء</th>
                 </tr>
+
               </thead>
 
               <tbody id="debt-table"></tbody>
@@ -458,85 +696,173 @@
       </div>
 
 
-      <!-- CAPTAIN YOUSSEF -->
+      <!-- ================= CAPTAIN YOUSSEF ================= -->
       <div class="page" id="page-youssef">
 
-        <div class="page-title" style="color:var(--gold);">
+        <div
+          class="page-title"
+          style="color: var(--gold);"
+        >
 
           <div class="title-left">
+
             <span class="icon">👑</span>
+
             القسم الخاص بكابتن يوسف
+
           </div>
 
         </div>
 
+
         <div class="tab-bar">
 
-          <button class="tab-btn active" onclick="switchYoussefTab('current',this)">
+          <button
+            class="tab-btn active"
+            onclick="switchYoussefTab('current', this)"
+          >
             📅 الشهر الحالي
           </button>
 
-          <button class="tab-btn" onclick="switchYoussefTab('staff-sec',this)">
+          <button
+            class="tab-btn"
+            onclick="switchYoussefTab('staff-sec', this)"
+          >
             🏋️ الموظفون والكباتن
           </button>
 
-          <button class="tab-btn" onclick="switchYoussefTab('salary-sec',this)">
+          <button
+            class="tab-btn"
+            onclick="switchYoussefTab('salary-sec', this)"
+          >
             💰 الرواتب والخصومات والسُلف
           </button>
 
-          <button class="tab-btn" onclick="switchYoussefTab('archive',this)">
+          <button
+            class="tab-btn"
+            onclick="switchYoussefTab('archive', this)"
+          >
             📦 أرشيف الشهور المكتملة
           </button>
 
-          <button class="tab-btn" style="color:var(--danger)" onclick="switchYoussefTab('trash-sec',this)">
+          <button
+            class="tab-btn"
+            style="color:var(--danger)"
+            onclick="switchYoussefTab('trash-sec', this)"
+          >
             🗑️ سلة المهملات
           </button>
 
         </div>
 
 
+        <!-- CURRENT MONTH -->
         <div id="youssef-current-sec">
 
           <div class="stats-grid">
 
             <div class="stat-card success">
-              <div class="stat-num" id="yous-total-income">0 ج.م</div>
-              <div class="stat-lbl">إجمالي دخل الشهر الثابت / المحقق</div>
+
+              <div
+                class="stat-num"
+                id="yous-total-income"
+              >
+                0 ج.م
+              </div>
+
+              <div class="stat-lbl">
+                إجمالي دخل الشهر الثابت / المحقق
+              </div>
+
             </div>
+
 
             <div class="stat-card danger">
-              <div class="stat-num" id="yous-total-exp">0 ج.م</div>
-              <div class="stat-lbl">إجمالي المنصرف (مصاريف + مرتبات)</div>
+
+              <div
+                class="stat-num"
+                id="yous-total-exp"
+              >
+                0 ج.م
+              </div>
+
+              <div class="stat-lbl">
+                إجمالي المنصرف (مصاريف + مرتبات)
+              </div>
+
             </div>
 
+
             <div class="stat-card info">
-              <div class="stat-num" id="yous-rem-income">0 ج.م</div>
-              <div class="stat-lbl">باقي إجمالي الشهر (الصافي)</div>
+
+              <div
+                class="stat-num"
+                id="yous-rem-income"
+              >
+                0 ج.م
+              </div>
+
+              <div class="stat-lbl">
+                باقي إجمالي الشهر (الصافي)
+              </div>
+
             </div>
 
           </div>
 
-          <div class="youssef-actions">
+
+          <div
+            style="
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              margin-bottom:14px;
+              background:#fff;
+              padding:12px;
+              border-radius:10px;
+              border:1px solid var(--border)
+            "
+          >
 
             <div>
-              <strong>تثبيت أو تعديل دخل الشهر:</strong>
 
-              <span class="sub">
+              <strong>
+                تثبيت أو تعديل دخل الشهر:
+              </strong>
+
+              <span
+                class="sub"
+                style="
+                  font-size:12px;
+                  color:var(--sub)
+                "
+              >
                 يمكنك زيادة أو تثبيت إجمالي دخل الشهر يدوياً
               </span>
+
             </div>
 
-            <div class="youssef-action-buttons">
 
-              <button class="btn btn-sm btn-ghost" onclick="setFixedMonthlyIncome()">
+            <div style="display:flex; gap:8px;">
+
+              <button
+                class="btn btn-sm btn-ghost"
+                onclick="setFixedMonthlyIncome()"
+              >
                 ✏️ تعديل إجمالي دخل الشهر
               </button>
 
-              <button class="btn btn-sm btn-warn" onclick="openAddYoussefExpense()">
+              <button
+                class="btn btn-sm btn-warn"
+                onclick="openAddYoussefExpense()"
+              >
                 💸 تسجيل مصروف / مستهلكات
               </button>
 
-              <button class="btn btn-sm btn-danger" onclick="closeAndArchiveMonth()">
+              <button
+                class="btn btn-sm btn-danger"
+                onclick="closeAndArchiveMonth()"
+              >
                 📦 إنهاء الشهر وتصفير سجل الأيام
               </button>
 
@@ -544,20 +870,25 @@
 
           </div>
 
+
           <div class="card">
 
             <div class="card-title">
+
               <span>
                 <span class="icon">📋</span>
                 تفاصيل مصروفات ومستهلكات الشهر الحالي
               </span>
+
             </div>
+
 
             <div class="table-wrap">
 
               <table>
 
                 <thead>
+
                   <tr>
                     <th>#</th>
                     <th>الوصف / البيان</th>
@@ -566,6 +897,7 @@
                     <th>التاريخ</th>
                     <th>إجراء</th>
                   </tr>
+
                 </thead>
 
                 <tbody id="youssef-expenses-table"></tbody>
@@ -580,43 +912,56 @@
 
 
         <!-- STAFF -->
-        <div id="youssef-staff-sec" style="display:none">
+        <div
+          id="youssef-staff-sec"
+          style="display:none"
+        >
 
           <div class="search-bar">
 
             <input
               type="text"
               id="staff-search"
-              placeholder="🔍 ابحث عن موظف..."
+              placeholder="🔍 ابحث باسم الموظف..."
               oninput="renderStaff()"
             />
 
-            <button class="btn btn-primary" onclick="openAddStaff()">
-              ➕ إضافة موظف جديد
+            <button
+              class="btn btn-primary"
+              onclick="openAddStaff()"
+            >
+              ➕ إضافة موظف / كابتن
             </button>
 
           </div>
 
-          <div class="table-wrap">
 
-            <table>
+          <div class="card">
 
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>الاسم</th>
-                  <th>الوظيفة</th>
-                  <th>الهاتف</th>
-                  <th>الراتب الأساسي</th>
-                  <th>تاريخ التعيين</th>
-                  <th>الحالة</th>
-                  <th>إجراءات</th>
-                </tr>
-              </thead>
+            <div class="table-wrap">
 
-              <tbody id="staff-table"></tbody>
+              <table>
 
-            </table>
+                <thead>
+
+                  <tr>
+                    <th>#</th>
+                    <th>الاسم</th>
+                    <th>الوظيفة</th>
+                    <th>الهاتف</th>
+                    <th>الراتب</th>
+                    <th>تاريخ التعيين</th>
+                    <th>الحالة</th>
+                    <th>إجراء</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="staff-table"></tbody>
+
+              </table>
+
+            </div>
 
           </div>
 
@@ -624,29 +969,47 @@
 
 
         <!-- SALARY -->
-        <div id="youssef-salary-sec" style="display:none">
+        <div
+          id="youssef-salary-sec"
+          style="display:none"
+        >
 
-          <div class="salary-top" id="salary-summary"></div>
+          <div class="card">
 
-          <div class="table-wrap">
+            <div class="card-title">
 
-            <table>
+              <span>
+                <span class="icon">💰</span>
+                الرواتب والخصومات والسُلف
+              </span>
 
-              <thead>
-                <tr>
-                  <th>الموظف</th>
-                  <th>الوظيفة</th>
-                  <th>الراتب الأساسي</th>
-                  <th>خصومات / سُلف ج.م</th>
-                  <th>الصافي</th>
-                  <th>حالة الصرف</th>
-                  <th>إجراء</th>
-                </tr>
-              </thead>
+            </div>
 
-              <tbody id="salary-table"></tbody>
 
-            </table>
+            <div class="table-wrap">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>#</th>
+                    <th>الموظف</th>
+                    <th>الراتب الأساسي</th>
+                    <th>الخصومات</th>
+                    <th>السُلف</th>
+                    <th>الصافي</th>
+                    <th>حالة الصرف</th>
+                    <th>إجراء</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="salary-table"></tbody>
+
+              </table>
+
+            </div>
 
           </div>
 
@@ -654,7 +1017,10 @@
 
 
         <!-- ARCHIVE -->
-        <div id="youssef-archive-sec" style="display:none">
+        <div
+          id="youssef-archive-sec"
+          style="display:none"
+        >
 
           <div class="search-bar">
 
@@ -667,20 +1033,25 @@
 
           </div>
 
+
           <div class="card">
 
             <div class="card-title">
+
               <span>
                 <span class="icon">📦</span>
                 سجلات الشهور والأرشيف التاريخي
               </span>
+
             </div>
+
 
             <div class="table-wrap">
 
               <table>
 
                 <thead>
+
                   <tr>
                     <th>الشهر / السنة</th>
                     <th>إجمالي دخل الشهر</th>
@@ -689,6 +1060,7 @@
                     <th>تاريخ الأرشفة</th>
                     <th>التفاصيل والإجراءات</th>
                   </tr>
+
                 </thead>
 
                 <tbody id="youssef-archive-table"></tbody>
@@ -703,22 +1075,29 @@
 
 
         <!-- TRASH -->
-        <div id="youssef-trash-sec" style="display:none">
+        <div
+          id="youssef-trash-sec"
+          style="display:none"
+        >
 
           <div class="card">
 
             <div class="card-title">
+
               <span>
                 <span class="icon">🗑️</span>
                 سلة المهملات والمحذوفات
               </span>
+
             </div>
+
 
             <div class="table-wrap">
 
               <table>
 
                 <thead>
+
                   <tr>
                     <th>#</th>
                     <th>نوع العنصر</th>
@@ -726,6 +1105,7 @@
                     <th>تاريخ الحذف</th>
                     <th>إجراءات</th>
                   </tr>
+
                 </thead>
 
                 <tbody id="trash-table-body"></tbody>
@@ -741,7 +1121,7 @@
       </div>
 
 
-      <!-- SETTINGS -->
+      <!-- ================= SETTINGS ================= -->
       <div class="page" id="page-settings">
 
         <div class="page-title">
@@ -753,64 +1133,152 @@
 
         </div>
 
-        <div class="settings-grid">
 
+        <div
+          style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:16px
+          "
+        >
+
+          <!-- ADMIN PASSWORD -->
           <div class="card">
 
             <div class="card-title">
+
               <span>
                 <span class="icon">🔒</span>
                 تغيير كلمة مرور تسجيل الدخول الأدمن
               </span>
+
             </div>
 
-            <div class="form-group">
-              <label>اسم المستخدم الجديد</label>
-              <input type="text" id="new-user" />
+
+            <div
+              class="form-group"
+              style="margin-bottom:12px"
+            >
+
+              <label>
+                اسم المستخدم الجديد (للأدمن)
+              </label>
+
+              <input
+                type="text"
+                id="new-user"
+              />
+
             </div>
 
-            <div class="form-group">
-              <label>كلمة المرور الجديدة</label>
-              <input type="password" id="new-pass" />
+
+            <div
+              class="form-group"
+              style="margin-bottom:12px"
+            >
+
+              <label>
+                كلمة المرور الجديدة
+                (تسجيل الدخول للأدمن)
+              </label>
+
+              <input
+                type="password"
+                id="new-pass"
+                placeholder="كلمة مرور الدخول للمنظومة"
+              />
+
             </div>
 
-            <div class="form-group">
-              <label>تأكيد كلمة مرور الأدمن</label>
-              <input type="password" id="confirm-pass" />
+
+            <div
+              class="form-group"
+              style="margin-bottom:16px"
+            >
+
+              <label>
+                تأكيد كلمة مرور الأدمن
+              </label>
+
+              <input
+                type="password"
+                id="confirm-pass"
+              />
+
             </div>
 
-            <button class="btn btn-primary" onclick="changeAdminCredentials()">
+
+            <button
+              class="btn btn-primary"
+              onclick="changeAdminCredentials()"
+            >
               💾 حفظ كلمة مرور الأدمن
             </button>
 
           </div>
 
 
+          <!-- YOUSSEF PASSWORD -->
           <div class="card">
 
             <div class="card-title">
+
               <span>
                 <span class="icon">👑</span>
                 تغيير كلمة مرور قسم كابتن يوسف
               </span>
+
             </div>
 
-            <div class="alert alert-info">
-              هذه كلمة المرور السرية المخصصة لفتح قسم كابتن يوسف فقط
+
+            <div
+              class="alert alert-info"
+              style="margin-bottom:12px"
+            >
+              هذه كلمة المرور السرية المخصصة لفتح كابتن يوسف فقط
             </div>
 
-            <div class="form-group">
-              <label>كلمة المرور الجديدة</label>
-              <input type="password" id="new-youssef-pass" />
+
+            <div
+              class="form-group"
+              style="margin-bottom:12px"
+            >
+
+              <label>
+                كلمة المرور الجديدة لقسم كابتن يوسف
+              </label>
+
+              <input
+                type="password"
+                id="new-youssef-pass"
+                placeholder="mahmoud"
+              />
+
             </div>
 
-            <div class="form-group">
-              <label>تأكيد كلمة المرور</label>
-              <input type="password" id="confirm-youssef-pass" />
+
+            <div
+              class="form-group"
+              style="margin-bottom:16px"
+            >
+
+              <label>
+                تأكيد كلمة مرور قسم كابتن يوسف
+              </label>
+
+              <input
+                type="password"
+                id="confirm-youssef-pass"
+              />
+
             </div>
 
-            <button class="btn btn-primary" onclick="changeYoussefCredentials()">
-              💾 حفظ كلمة المرور
+
+            <button
+              class="btn btn-primary"
+              onclick="changeYoussefCredentials()"
+            >
+              💾 حفظ كلمة مرور كابتن يوسف
             </button>
 
           </div>
@@ -818,40 +1286,71 @@
         </div>
 
 
-        <div class="card settings-card">
+        <!-- PRICES -->
+        <div
+          class="card"
+          style="margin-top:16px"
+        >
 
           <div class="card-title">
+
             <span>
               <span class="icon">🏷️</span>
               أسعار الاشتراكات الثابتة
             </span>
+
           </div>
+
 
           <div id="prices-form"></div>
 
-          <button class="btn btn-primary" onclick="savePrices()">
+
+          <button
+            class="btn btn-primary"
+            style="margin-top:14px"
+            onclick="savePrices()"
+          >
             💾 حفظ الأسعار
           </button>
 
         </div>
 
 
-        <div class="card settings-card">
+        <!-- RESET -->
+        <div
+          class="card"
+          style="margin-top:16px"
+        >
 
           <div class="card-title">
+
             <span>
               <span class="icon">🗑️</span>
               إدارة وتصفير البيانات
             </span>
+
           </div>
 
-          <div class="settings-buttons">
 
-            <button class="btn btn-warn" onclick="clearAttendance()">
+          <div
+            style="
+              display:flex;
+              gap:12px;
+              flex-wrap:wrap
+            "
+          >
+
+            <button
+              class="btn btn-warn"
+              onclick="clearAttendance()"
+            >
               🔄 مسح سجل الحضور اليومي
             </button>
 
-            <button class="btn btn-danger" onclick="resetAll()">
+            <button
+              class="btn btn-danger"
+              onclick="resetAll()"
+            >
               ⚠️ إعادة ضبط المصنع بالكامل
             </button>
 
@@ -868,126 +1367,276 @@
 </div>
 
 
+<!-- ================= MODALS ================= -->
+
 <!-- MEMBER MODAL -->
-<div class="modal-overlay" id="modal-member">
+<div
+  class="modal-overlay"
+  id="modal-member"
+>
 
   <div class="modal">
 
     <div class="modal-header">
 
-      <div class="modal-title" id="modal-member-title">
+      <div
+        class="modal-title"
+        id="modal-member-title"
+      >
         ➕ إضافة عضو جديد
       </div>
 
-      <button class="modal-close" onclick="closeModal('modal-member')">
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-member')"
+      >
         ✕
       </button>
 
     </div>
 
+
     <div class="form-grid">
 
       <div class="form-group">
-        <label>الاسم الكامل *</label>
-        <input id="m-name" placeholder="اسم العضو" />
+
+        <label>
+          الاسم الكامل *
+        </label>
+
+        <input
+          id="m-name"
+          placeholder="اسم العضو"
+        />
+
       </div>
 
+
       <div class="form-group">
-        <label>رقم الهاتف</label>
+
+        <label>
+          رقم الهاتف (11 رقم) *
+        </label>
+
         <input
           id="m-phone"
           placeholder="01xxxxxxxxx"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
           maxlength="11"
         />
+
       </div>
 
     </div>
 
+
     <div class="form-grid">
 
       <div class="form-group">
+
         <label>السن</label>
-        <input type="number" id="m-age" />
+
+        <input
+          type="number"
+          id="m-age"
+          placeholder="25"
+        />
+
       </div>
 
+
       <div class="form-group">
+
         <label>الجنس</label>
+
         <select id="m-gender">
-          <option value="ذكر">ذكر</option>
-          <option value="أنثى">أنثى</option>
-        </select>
-      </div>
 
-    </div>
+          <option value="ذكر">
+            ذكر
+          </option>
 
-    <div class="form-grid">
+          <option value="أنثى">
+            أنثى
+          </option>
 
-      <div class="form-group">
-        <label>نوع الاشتراك</label>
-
-        <select id="m-sub" onchange="onSubChange()">
-          <option value="monthly">شهري</option>
-          <option value="3months">3 شهور</option>
-          <option value="6months">6 شهور</option>
-          <option value="yearly">سنوي</option>
-          <option value="private">برايفت</option>
         </select>
 
       </div>
 
-      <div class="form-group">
-        <label>سعر الاشتراك</label>
-        <input type="number" id="m-price" oninput="updateRemaining()" />
-      </div>
-
     </div>
 
-    <div class="form-grid one" id="coach-field-group" style="display:none">
-
-      <div class="form-group">
-        <label>اسم الكابتن</label>
-        <input id="m-coach" />
-      </div>
-
-    </div>
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>تاريخ البداية *</label>
-        <input type="date" id="m-start" />
+
+        <label>
+          نوع الاشتراك
+        </label>
+
+        <select
+          id="m-sub"
+          onchange="onSubChange()"
+        >
+
+          <option value="monthly">
+            شهري
+          </option>
+
+          <option value="3months">
+            3 شهور
+          </option>
+
+          <option value="6months">
+            6 شهور
+          </option>
+
+          <option value="yearly">
+            سنوي
+          </option>
+
+          <option value="private">
+            برايفت (Private)
+          </option>
+
+        </select>
+
       </div>
 
+
       <div class="form-group">
-        <label>تاريخ الانتهاء *</label>
-        <input type="date" id="m-end" />
+
+        <label>
+          سعر الاشتراك (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="m-price"
+          oninput="updateRemaining()"
+        />
+
       </div>
 
     </div>
+
+
+    <div
+      class="form-grid one"
+      id="coach-field-group"
+      style="display:none;"
+    >
+
+      <div class="form-group">
+
+        <label>
+          اسم الكابتن (اشتراك برايفت)
+        </label>
+
+        <input
+          id="m-coach"
+          placeholder="اسم المدرب الخاص..."
+        />
+
+      </div>
+
+    </div>
+
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>المبلغ المدفوع</label>
-        <input type="number" id="m-paid" oninput="updateRemaining()" />
+
+        <label>
+          تاريخ البداية *
+        </label>
+
+        <input
+          type="date"
+          id="m-start"
+        />
+
       </div>
+
 
       <div class="form-group">
-        <label>المتبقي</label>
-        <input type="number" id="m-remaining" readonly />
+
+        <label>
+          تاريخ الانتهاء *
+        </label>
+
+        <input
+          type="date"
+          id="m-end"
+        />
+
       </div>
 
     </div>
 
-    <div class="form-group">
-      <label>ملاحظات</label>
-      <input id="m-notes" />
+
+    <div class="form-grid">
+
+      <div class="form-group">
+
+        <label>
+          المبلغ المدفوع (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="m-paid"
+          placeholder="0"
+          oninput="updateRemaining()"
+        />
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label>
+          المتبقي (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="m-remaining"
+          readonly
+          style="background:#f9fafb"
+        />
+
+      </div>
+
     </div>
+
+
+    <div class="form-grid one">
+
+      <div class="form-group">
+
+        <label>
+          ملاحظات
+        </label>
+
+        <input
+          id="m-notes"
+          placeholder="أي ملاحظات إضافية..."
+        />
+
+      </div>
+
+    </div>
+
 
     <div class="form-divider"></div>
 
-    <button class="btn btn-primary full-btn" onclick="saveMember()">
+
+    <button
+      class="btn btn-primary"
+      style="width:100%"
+      onclick="saveMember()"
+    >
       💾 حفظ بيانات العضو
     </button>
 
@@ -997,75 +1646,153 @@
 
 
 <!-- STAFF MODAL -->
-<div class="modal-overlay" id="modal-staff">
+<div
+  class="modal-overlay"
+  id="modal-staff"
+>
 
   <div class="modal">
 
     <div class="modal-header">
-      <div class="modal-title">➕ إضافة موظف جديد</div>
-      <button class="modal-close" onclick="closeModal('modal-staff')">✕</button>
+
+      <div class="modal-title">
+        ➕ إضافة موظف جديد
+      </div>
+
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-staff')"
+      >
+        ✕
+      </button>
+
     </div>
+
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>الاسم الكامل *</label>
-        <input id="s-name" />
+
+        <label>
+          الاسم الكامل *
+        </label>
+
+        <input
+          id="s-name"
+          placeholder="اسم الموظف"
+        />
+
       </div>
 
+
       <div class="form-group">
-        <label>الوظيفة</label>
+
+        <label>
+          الوظيفة
+        </label>
 
         <select id="s-role">
+
           <option>كابتن</option>
           <option>موظف استقبال</option>
           <option>مدير</option>
           <option>عامل نظافة</option>
           <option>حارس أمن</option>
           <option>مدرب شخصي</option>
+
         </select>
 
       </div>
 
     </div>
 
+
     <div class="form-grid">
 
       <div class="form-group">
-        <label>رقم الهاتف</label>
-        <input id="s-phone" maxlength="11" />
+
+        <label>
+          رقم الهاتف (11 رقم)
+        </label>
+
+        <input
+          id="s-phone"
+          placeholder="01xxxxxxxxx"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+          maxlength="11"
+        />
+
       </div>
 
+
       <div class="form-group">
-        <label>الراتب الأساسي</label>
-        <input type="number" id="s-salary" />
+
+        <label>
+          الراتب الأساسي (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="s-salary"
+          placeholder="0"
+        />
+
       </div>
 
     </div>
 
+
     <div class="form-grid">
 
       <div class="form-group">
-        <label>تاريخ التعيين</label>
-        <input type="date" id="s-hire" />
+
+        <label>
+          تاريخ التعيين
+        </label>
+
+        <input
+          type="date"
+          id="s-hire"
+        />
+
       </div>
 
+
       <div class="form-group">
-        <label>الحالة</label>
+
+        <label>
+          الحالة
+        </label>
 
         <select id="s-status">
-          <option value="نشط">نشط</option>
-          <option value="إجازة">إجازة</option>
-          <option value="متوقف">متوقف</option>
+
+          <option value="نشط">
+            نشط
+          </option>
+
+          <option value="إجازة">
+            إجازة
+          </option>
+
+          <option value="متوقف">
+            متوقف
+          </option>
+
         </select>
 
       </div>
 
     </div>
+
 
     <div class="form-divider"></div>
 
-    <button class="btn btn-primary full-btn" onclick="saveStaff()">
+
+    <button
+      class="btn btn-primary"
+      style="width:100%"
+      onclick="saveStaff()"
+    >
       💾 حفظ الموظف
     </button>
 
@@ -1075,84 +1802,188 @@
 
 
 <!-- RENEW MODAL -->
-<div class="modal-overlay" id="modal-renew">
+<div
+  class="modal-overlay"
+  id="modal-renew"
+>
 
   <div class="modal">
 
     <div class="modal-header">
 
-      <div class="modal-title">🔄 تجديد اشتراك</div>
+      <div class="modal-title">
+        🔄 تجديد اشتراك
+      </div>
 
-      <button class="modal-close" onclick="closeModal('modal-renew')">
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-renew')"
+      >
         ✕
       </button>
 
     </div>
 
-    <div class="alert alert-info" id="renew-info"></div>
+
+    <div
+      class="alert alert-info"
+      id="renew-info"
+    ></div>
+
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>نوع الاشتراك الجديد</label>
 
-        <select id="r-sub" onchange="onRenewSubChange()">
-          <option value="monthly">شهري</option>
-          <option value="3months">3 شهور</option>
-          <option value="6months">6 شهور</option>
-          <option value="yearly">سنوي</option>
-          <option value="private">برايفت</option>
+        <label>
+          نوع الاشتراك الجديد
+        </label>
+
+        <select
+          id="r-sub"
+          onchange="onRenewSubChange()"
+        >
+
+          <option value="monthly">
+            شهري
+          </option>
+
+          <option value="3months">
+            3 شهور
+          </option>
+
+          <option value="6months">
+            6 شهور
+          </option>
+
+          <option value="yearly">
+            سنوي
+          </option>
+
+          <option value="private">
+            برايفت (Private)
+          </option>
+
         </select>
 
       </div>
 
+
       <div class="form-group">
-        <label>السعر</label>
-        <input type="number" id="r-price" oninput="updateRenewRemaining()" />
+
+        <label>
+          سعر الاشتراك (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="r-price"
+          oninput="updateRenewRemaining()"
+        />
+
       </div>
 
     </div>
 
-    <div class="form-grid one" id="r-coach-field-group" style="display:none">
+
+    <div
+      class="form-grid one"
+      id="r-coach-field-group"
+      style="display:none;"
+    >
 
       <div class="form-group">
-        <label>اسم الكابتن</label>
-        <input id="r-coach" />
+
+        <label>
+          اسم الكابتن (برايفت)
+        </label>
+
+        <input
+          id="r-coach"
+          placeholder="اسم المدرب..."
+        />
+
       </div>
 
     </div>
+
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>تاريخ البداية</label>
-        <input type="date" id="r-start" />
+
+        <label>
+          تاريخ البداية
+        </label>
+
+        <input
+          type="date"
+          id="r-start"
+        />
+
       </div>
 
+
       <div class="form-group">
-        <label>تاريخ الانتهاء</label>
-        <input type="date" id="r-end" />
+
+        <label>
+          تاريخ الانتهاء
+        </label>
+
+        <input
+          type="date"
+          id="r-end"
+        />
+
       </div>
 
     </div>
+
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>المبلغ المدفوع</label>
-        <input type="number" id="r-paid" oninput="updateRenewRemaining()" />
+
+        <label>
+          المبلغ المدفوع (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="r-paid"
+          placeholder="0"
+          oninput="updateRenewRemaining()"
+        />
+
       </div>
 
+
       <div class="form-group">
-        <label>المتبقي</label>
-        <input type="number" id="r-remaining" readonly />
+
+        <label>
+          المتبقي (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="r-remaining"
+          readonly
+          style="background:#f9fafb"
+        />
+
       </div>
 
     </div>
+
 
     <div class="form-divider"></div>
 
-    <button class="btn btn-success full-btn" onclick="saveRenew()">
+
+    <button
+      class="btn btn-success"
+      style="width:100%"
+      onclick="saveRenew()"
+    >
       ✅ تأكيد تجديد الاشتراك
     </button>
 
@@ -1162,28 +1993,58 @@
 
 
 <!-- PAYMENT MODAL -->
-<div class="modal-overlay" id="modal-pay">
+<div
+  class="modal-overlay"
+  id="modal-pay"
+>
 
   <div class="modal">
 
     <div class="modal-header">
 
-      <div class="modal-title">💳 تسجيل دفعة مالية</div>
+      <div class="modal-title">
+        💳 تسجيل دفعة مالية
+      </div>
 
-      <button class="modal-close" onclick="closeModal('modal-pay')">
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-pay')"
+      >
         ✕
       </button>
 
     </div>
 
-    <div id="pay-info"></div>
 
-    <div class="form-group">
-      <label>المبلغ المدفوع *</label>
-      <input type="number" id="pay-amount" />
+    <div
+      id="pay-info"
+      style="margin-bottom:16px;line-height:1.8"
+    ></div>
+
+
+    <div
+      class="form-group"
+      style="margin-bottom:16px"
+    >
+
+      <label>
+        المبلغ المدفوع (ج.م) *
+      </label>
+
+      <input
+        type="number"
+        id="pay-amount"
+        placeholder="0"
+      />
+
     </div>
 
-    <button class="btn btn-success full-btn" onclick="savePayment()">
+
+    <button
+      class="btn btn-success"
+      style="width:100%"
+      onclick="savePayment()"
+    >
       ✅ تسجيل الدفعة
     </button>
 
@@ -1193,54 +2054,119 @@
 
 
 <!-- EXPENSE MODAL -->
-<div class="modal-overlay" id="modal-expense">
+<div
+  class="modal-overlay"
+  id="modal-expense"
+>
 
   <div class="modal">
 
     <div class="modal-header">
 
-      <div class="modal-title">💸 إضافة مصروف / مستهلكات</div>
+      <div class="modal-title">
+        💸 إضافة مصروف / مستهلكات
+      </div>
 
-      <button class="modal-close" onclick="closeModal('modal-expense')">
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-expense')"
+      >
         ✕
       </button>
 
     </div>
 
-    <div class="form-group">
-      <label>وصف المصروف *</label>
-      <input id="exp-desc" />
+
+    <div
+      class="form-group"
+      style="margin-bottom:12px"
+    >
+
+      <label>
+        وصف المصروف *
+      </label>
+
+      <input
+        id="exp-desc"
+        placeholder="مثال: قطع واير، إيجار، كهرباء، مياه..."
+      />
+
     </div>
+
 
     <div class="form-grid">
 
       <div class="form-group">
-        <label>الفئة</label>
+
+        <label>
+          الفئة
+        </label>
 
         <select id="exp-cat">
-          <option value="مستهلكات وصيانة">مستهلكات وصيانة</option>
-          <option value="فواتير ثابته">فواتير (إيجار/كهرباء/مياه)</option>
-          <option value="مرتبات وسُلف">مرتبات وسُلف</option>
-          <option value="نثريات">نثريات مصاريف أخرى</option>
+
+          <option value="مستهلكات وصيانة">
+            مستهلكات وصيانة
+          </option>
+
+          <option value="فواتير ثابته">
+            فواتير (إيجار/كهرباء/مياه)
+          </option>
+
+          <option value="مرتبات وسُلف">
+            مرتبات وسُلف
+          </option>
+
+          <option value="نثريات">
+            نثريات مصاريف أخرى
+          </option>
+
         </select>
 
       </div>
 
+
       <div class="form-group">
-        <label>المبلغ</label>
-        <input type="number" id="exp-amount" />
+
+        <label>
+          المبلغ (ج.م) *
+        </label>
+
+        <input
+          type="number"
+          id="exp-amount"
+          placeholder="0"
+        />
+
       </div>
 
     </div>
 
-    <div class="form-group">
-      <label>التاريخ</label>
-      <input type="date" id="exp-date" />
+
+    <div
+      class="form-group"
+      style="margin-bottom:12px"
+    >
+
+      <label>
+        التاريخ
+      </label>
+
+      <input
+        type="date"
+        id="exp-date"
+      />
+
     </div>
+
 
     <div class="form-divider"></div>
 
-    <button class="btn btn-danger full-btn" onclick="saveExpense()">
+
+    <button
+      class="btn btn-danger"
+      style="width:100%"
+      onclick="saveExpense()"
+    >
       💾 حفظ المصروف
     </button>
 
@@ -1249,22 +2175,32 @@
 </div>
 
 
-<!-- DETAILS MODAL -->
-<div class="modal-overlay" id="modal-details">
+<!-- DETAILS & EDIT MODAL -->
+<div
+  class="modal-overlay"
+  id="modal-details"
+>
 
   <div class="modal modal-lg">
 
     <div class="modal-header">
 
-      <div class="modal-title" id="details-modal-title">
+      <div
+        class="modal-title"
+        id="details-modal-title"
+      >
         📋 التفاصيل الإدارية والتعديل
       </div>
 
-      <button class="modal-close" onclick="closeModal('modal-details')">
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-details')"
+      >
         ✕
       </button>
 
     </div>
+
 
     <div id="details-modal-body"></div>
 
@@ -1273,22 +2209,32 @@
 </div>
 
 
-<!-- DAY VIEW MODAL -->
-<div class="modal-overlay" id="modal-day-view">
+<!-- DAY ARCHIVE VIEW MODAL -->
+<div
+  class="modal-overlay"
+  id="modal-day-view"
+>
 
   <div class="modal modal-lg">
 
     <div class="modal-header">
 
-      <div class="modal-title" id="day-view-title">
+      <div
+        class="modal-title"
+        id="day-view-title"
+      >
         📅 تفاصيل حركة اليوم
       </div>
 
-      <button class="modal-close" onclick="closeModal('modal-day-view')">
+      <button
+        class="modal-close"
+        onclick="closeModal('modal-day-view')"
+      >
         ✕
       </button>
 
     </div>
+
 
     <div id="day-view-body"></div>
 

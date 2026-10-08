@@ -1,137 +1,82 @@
-const SUB_DAYS = {
-  monthly: 30,
-  '3months': 90,
-  '6months': 180,
-  yearly: 365,
-  private: 30
-};
+const SUB_DAYS   = { monthly:30, '3months':90, '6months':180, yearly:365, private:30 };
+const SUB_LABELS = { monthly:'شهري', '3months':'3 شهور', '6months':'6 شهور', yearly:'سنوي', private:'برايفت' };
 
-const SUB_LABELS = {
-  monthly: 'شهري',
-  '3months': '3 شهور',
-  '6months': '6 شهور',
-  yearly: 'سنوي',
-  private: 'برايفت'
-};
+let ADMIN = { user:"admin", pass:"shark2024", youssefPass:"mahmoud" };
+let SUB_PRICES = { monthly:200, '3months':550, '6months':1000, yearly:1800, private:500 };
 
-let ADMIN = {
-  user: "admin",
-  pass: "shark2024",
-  youssefPass: "mahmoud"
-};
-
-let SUB_PRICES = {
-  monthly: 200,
-  '3months': 550,
-  '6months': 1000,
-  yearly: 1800,
-  private: 500
-};
-
-let members = [];
-let staff = [];
-let attLog = [];
-let expenses = [];
-let archives = [];
-let daysLog = [];
-let trashBin = [];
-let payments = [];
-
+let members   = [];
+let staff     = [];
+let attLog    = [];
+let expenses  = [];
+let archives  = [];
+let daysLog   = [];
+let trashBin  = [];
+let payments  = [];
 let manualFixedIncome = null;
 
-let editMemberIdx = -1;
-let editRenewIdx = -1;
-let editPayIdx = -1;
-let editStaffIdx = -1;
-
-let currentDetailType = '';
-let currentDetailIdx = -1;
-
-let db = null;
+let editMemberIdx = -1, editRenewIdx = -1, editPayIdx = -1, editStaffIdx = -1;
+let currentDetailType = '', currentDetailIdx = -1;
+let db;
+let systemDate = null;
 let clockTimer = null;
 
-
-/* =========================================================
-   INITIALIZATION
-========================================================= */
-
-window.onload = function () {
-
-  initDatabase(function () {
-
+window.onload = function() {
+  initDatabase(function() {
     if (sessionStorage.getItem('sg_session_active') === 'true') {
       enterApp();
     }
-
   });
-
 };
 
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
 
-/* =========================================================
-   DATABASE
-========================================================= */
+// =====================================================
+// DATABASE
+// =====================================================
 
 function initDatabase(callback) {
-
   const request = indexedDB.open("SharkGymDB", 6);
 
-  request.onupgradeneeded = function (e) {
-
+  request.onupgradeneeded = function(e) {
     const database = e.target.result;
 
     if (!database.objectStoreNames.contains("system_config")) {
       database.createObjectStore("system_config");
     }
-
   };
 
-  request.onsuccess = function (e) {
-
+  request.onsuccess = function(e) {
     db = e.target.result;
-
-    db.onversionchange = function () {
-      db.close();
-    };
-
     loadDataFromDB(callback);
-
   };
 
-  request.onerror = function () {
-
+  request.onerror = function() {
     alert("❌ فشل تشغيل محرك التخزين المتقدم!");
-
   };
-
 }
 
-
 function loadDataFromDB(callback) {
-
-  const transaction = db.transaction(
-    ["system_config"],
-    "readonly"
-  );
-
+  const transaction = db.transaction(["system_config"], "readonly");
   const store = transaction.objectStore("system_config");
 
   const req = store.get("app_state");
 
-  req.onsuccess = function () {
+  req.onsuccess = function() {
 
     if (req.result) {
-
       const d = req.result;
 
-      members = d.members || [];
-      staff = d.staff || [];
-      attLog = d.attLog || [];
-      expenses = d.expenses || [];
-      archives = d.archives || [];
-      daysLog = d.daysLog || [];
-      trashBin = d.trashBin || [];
-      payments = d.payments || [];
+      members   = d.members || [];
+      staff     = d.staff || [];
+      attLog    = d.attLog || [];
+      expenses  = d.expenses || [];
+      archives  = d.archives || [];
+      daysLog   = d.daysLog || [];
+      trashBin  = d.trashBin || [];
+      payments  = d.payments || [];
 
       manualFixedIncome =
         d.manualFixedIncome !== undefined
@@ -141,29 +86,28 @@ function loadDataFromDB(callback) {
       SUB_PRICES = d.prices || SUB_PRICES;
       ADMIN = d.admin || ADMIN;
 
+      systemDate = d.systemDate || null;
+
       if (!ADMIN.youssefPass) {
         ADMIN.youssefPass = "mahmoud";
       }
-
     }
 
     callback();
-
   };
-
 }
 
-
 function save() {
+  if (!db) {
+    console.warn('SharkGymDB is not ready yet.');
+    return;
+  }
 
-  if (!db) return;
+  const transaction =
+    db.transaction(["system_config"], "readwrite");
 
-  const transaction = db.transaction(
-    ["system_config"],
-    "readwrite"
-  );
-
-  const store = transaction.objectStore("system_config");
+  const store =
+    transaction.objectStore("system_config");
 
   const appState = {
     members,
@@ -176,24 +120,72 @@ function save() {
     payments,
     manualFixedIncome,
     prices: SUB_PRICES,
-    admin: ADMIN
+    admin: ADMIN,
+    systemDate
   };
 
   store.put(appState, "app_state");
-
 }
 
+// =====================================================
+// HELPERS
+// =====================================================
 
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function today() {
-
+function realToday() {
   const d = new Date();
 
   const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
 
+  return `${y}-${m}-${day}`;
+}
+
+function today() {
+  return systemDate || realToday();
+}
+
+function nowTime() {
+  return new Date().toTimeString().slice(0,5);
+}
+
+function parseDateLocal(dateStr) {
+  if (!dateStr) {
+    return new Date(NaN);
+  }
+
+  const [y, m, d] =
+    dateStr.split('-').map(Number);
+
+  return new Date(y, m - 1, d);
+}
+
+function daysLeft(end) {
+  const endDate = parseDateLocal(end);
+  const baseDate = parseDateLocal(today());
+
+  if (
+    Number.isNaN(endDate.getTime()) ||
+    Number.isNaN(baseDate.getTime())
+  ) {
+    return 0;
+  }
+
+  return Math.ceil(
+    (endDate - baseDate) / 86400000
+  );
+}
+
+function addDays(dateStr, days) {
+  const d = parseDateLocal(
+    dateStr || today()
+  );
+
+  d.setDate(
+    d.getDate() + Number(days || 0)
+  );
+
+  const y = d.getFullYear();
   const m = String(
     d.getMonth() + 1
   ).padStart(2, '0');
@@ -203,108 +195,40 @@ function today() {
   ).padStart(2, '0');
 
   return `${y}-${m}-${day}`;
-
 }
 
-
-function nowTime() {
-
-  return new Date()
-    .toTimeString()
-    .slice(0, 5);
-
+function fmt(n) {
+  return Number(n || 0)
+    .toLocaleString('en-US');
 }
-
-
-function addDays(dateStr, days) {
-
-  const [year, month, day] =
-    dateStr.split('-').map(Number);
-
-  const d = new Date(
-    year,
-    month - 1,
-    day
-  );
-
-  d.setDate(
-    d.getDate() + Number(days || 0)
-  );
-
-  const y = d.getFullYear();
-
-  const m = String(
-    d.getMonth() + 1
-  ).padStart(2, '0');
-
-  const dayValue = String(
-    d.getDate()
-  ).padStart(2, '0');
-
-  return `${y}-${m}-${dayValue}`;
-
-}
-
-
-function daysLeft(end) {
-
-  if (!end) return 0;
-
-  const [y, m, d] =
-    end.split('-').map(Number);
-
-  const target =
-    new Date(y, m - 1, d);
-
-  const now = new Date();
-
-  const todayDate =
-    new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-
-  return Math.ceil(
-    (target - todayDate) / 86400000
-  );
-
-}
-
 
 function memberStatus(m) {
-
   const dl = daysLeft(m.end);
 
   if (dl < 0) {
-
     return {
-      label: 'منتهي',
-      cls: 'badge-danger'
+      label:'منتهي',
+      cls:'badge-danger'
     };
-
   }
 
   if (dl <= 7) {
-
     return {
-      label: `ينتهي بعد ${dl}ي`,
-      cls: 'badge-warn'
+      label:`ينتهي بعد ${dl}ي`,
+      cls:'badge-warn'
     };
-
   }
 
   return {
-    label: 'نشط',
-    cls: 'badge-success'
+    label:'نشط',
+    cls:'badge-success'
   };
-
 }
 
-
 function calcDuration(i, o) {
-
-  if (!i || !o) return '—';
+  if (!i || !o) {
+    return '—';
+  }
 
   const [ih, im] =
     i.split(':').map(Number);
@@ -321,47 +245,81 @@ function calcDuration(i, o) {
   }
 
   return `${Math.floor(t / 60)}س ${t % 60}د`;
-
 }
 
+// =====================================================
+// SYSTEM DATE + PASSWORD TOGGLE
+// =====================================================
 
-function fmt(n) {
+function updateTopDate() {
+  const input =
+    document.getElementById('top-date-input');
 
-  return Number(n || 0)
-    .toLocaleString('en-US');
-
+  if (input) {
+    input.value = today();
+  }
 }
 
-
-function escapeHtml(value) {
-
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-}
-
-
-function closeModal(id) {
-
-  const el = document.getElementById(id);
-
-  if (el) {
-    el.classList.remove('open');
+function changeSystemDate(value) {
+  if (!value) {
+    return;
   }
 
+  systemDate = value;
+
+  save();
+  updateTopDate();
+
+  renderDashboard();
+  renderMembers();
+  renderAttMembers();
+  renderAttStaff();
+  renderAttLog();
+  renderFinance();
+  renderDaysLog();
+  renderYoussefSection();
 }
 
+function toggleLoginPassword() {
+  const input =
+    document.getElementById('l-pass');
 
-/* =========================================================
-   LOGIN / APP
-========================================================= */
+  const button =
+    document.querySelector('.password-toggle');
+
+  if (!input || !button) {
+    return;
+  }
+
+  const showing =
+    input.type === 'text';
+
+  input.type =
+    showing ? 'password' : 'text';
+
+  button.textContent =
+    showing ? '👁️' : '🙈';
+
+  button.setAttribute(
+    'aria-label',
+    showing
+      ? 'إظهار كلمة المرور'
+      : 'إخفاء كلمة المرور'
+  );
+
+  button.setAttribute(
+    'title',
+    showing
+      ? 'إظهار كلمة المرور'
+      : 'إخفاء كلمة المرور'
+  );
+}
+
+// =====================================================
+// APP CONTROLLER
+// =====================================================
 
 function doLogin() {
-
   const u =
     document.getElementById('l-user')
       .value.trim();
@@ -389,12 +347,9 @@ function doLogin() {
     ).style.display = 'block';
 
   }
-
 }
 
-
 function enterApp() {
-
   document.getElementById(
     'login-screen'
   ).style.display = 'none';
@@ -415,12 +370,9 @@ function enterApp() {
   ).classList.add('open');
 
   renderDashboard();
-
 }
 
-
 function doLogout() {
-
   sessionStorage.removeItem(
     'sg_session_active'
   );
@@ -444,67 +396,49 @@ function doLogout() {
   document.getElementById(
     'login-err'
   ).style.display = 'none';
-
 }
 
-
 function startClock() {
-
-  if (clockTimer) {
-    clearInterval(clockTimer);
-  }
 
   function update() {
 
     const now = new Date();
 
-    const dateEl =
-      document.getElementById('top-date');
-
     const timeEl =
-      document.getElementById('top-time');
-
-    if (!dateEl || !timeEl) return;
-
-    dateEl.textContent =
-      now.toLocaleDateString(
-        'ar-EG',
-        {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }
+      document.getElementById(
+        'top-time'
       );
 
-    timeEl.textContent =
-      now.toLocaleTimeString(
-        'ar-EG',
-        {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        }
-      );
+    if (timeEl) {
+      timeEl.textContent =
+        now.toLocaleTimeString(
+          'ar-EG',
+          {
+            hour:'2-digit',
+            minute:'2-digit',
+            second:'2-digit'
+          }
+        );
+    }
 
+    updateTopDate();
+  }
+
+  if (clockTimer) {
+    clearInterval(clockTimer);
   }
 
   update();
 
   clockTimer =
     setInterval(update, 1000);
-
 }
 
-
 function toggleSidebar() {
-
   document
     .getElementById('main-sidebar')
     .classList.toggle('open');
-
 }
-
 
 function checkSectionAuth(name, btn) {
 
@@ -513,215 +447,517 @@ function checkSectionAuth(name, btn) {
       'برجاء إدخال كلمة مرور المسؤول لدخول القسم:'
     );
 
-  if (password === null) return;
-
-  if (password === ADMIN.pass) {
-
-    showPage(name, btn);
-
-  } else {
-
-    alert('❌ كلمة المرور غير صحيحة');
-
+  if (password === null) {
+    return;
   }
 
+  if (password === ADMIN.pass) {
+    showPage(name, btn);
+  } else {
+    alert('كلمة المرور غير صحيحة!');
+  }
 }
-
 
 function checkYoussefAuth(btn) {
 
   const password =
     prompt(
-      'برجاء إدخال كلمة مرور قسم كابتن يوسف:'
+      '🔐 برجاء إدخال كلمة المرور لدخول قسم كابتن يوسف:'
     );
 
-  if (password === null) return;
+  if (password === null) {
+    return;
+  }
 
   if (
-    password === ADMIN.youssefPass
+    password ===
+    (ADMIN.youssefPass || "mahmoud")
   ) {
 
-    showPage('youssef', btn);
+    showPage(
+      'youssef',
+      btn
+    );
 
   } else {
 
-    alert('❌ كلمة المرور غير صحيحة');
+    alert(
+      '❌ كلمة المرور الخاصة بكابتن يوسف غير صحيحة!'
+    );
 
   }
-
 }
-
-
-/* =========================================================
-   PAGE CONTROLLER
-========================================================= */
 
 function showPage(name, btn) {
 
   document
     .querySelectorAll('.page')
-    .forEach(p => p.classList.remove('active'));
-
-  const page =
-    document.getElementById(
-      `page-${name}`
+    .forEach(
+      p => p.classList.remove('active')
     );
-
-  if (!page) return;
-
-  page.classList.add('active');
 
   document
     .querySelectorAll('.nav-item')
-    .forEach(b => b.classList.remove('active'));
+    .forEach(
+      b => b.classList.remove('active')
+    );
+
+  const page =
+    document.getElementById(
+      'page-' + name
+    );
+
+  if (page) {
+    page.classList.add('active');
+  }
 
   if (btn) {
     btn.classList.add('active');
   }
 
+  if (
+    window.innerWidth <= 768
+  ) {
+    document
+      .getElementById('main-sidebar')
+      .classList.remove('open');
+  }
+
   if (name === 'dashboard') {
     renderDashboard();
-  }
 
-  else if (name === 'members') {
+  } else if (name === 'members') {
     renderMembers();
+
+  } else if (name === 'attendance') {
+    renderAttMembers();
+    renderAttStaff();
+    renderAttLog();
+
+  } else if (name === 'days-log') {
+    renderDaysLog();
+
+  } else if (name === 'finance') {
+    renderFinance();
+
+  } else if (name === 'youssef') {
+    renderYoussefSection();
+
+  } else if (name === 'settings') {
+    renderSettings();
+  }
+}
+
+// =====================================================
+// SETTINGS
+// =====================================================
+
+function renderSettings() {
+
+  document.getElementById(
+    'new-user'
+  ).value = ADMIN.user;
+
+  document.getElementById(
+    'new-pass'
+  ).value = '';
+
+  document.getElementById(
+    'confirm-pass'
+  ).value = '';
+
+  document.getElementById(
+    'new-youssef-pass'
+  ).value = '';
+
+  document.getElementById(
+    'confirm-youssef-pass'
+  ).value = '';
+
+  let html = '';
+
+  for (let key in SUB_PRICES) {
+
+    html += `
+      <div
+        class="form-group"
+        style="margin-bottom:10px"
+      >
+
+        <label>
+          سعر ${SUB_LABELS[key]}
+        </label>
+
+        <input
+          type="number"
+          id="price-${key}"
+          value="${SUB_PRICES[key]}"
+        />
+
+      </div>
+    `;
   }
 
-  else if (name === 'attendance') {
+  document.getElementById(
+    'prices-form'
+  ).innerHTML = html;
+}
+
+function changeAdminCredentials() {
+
+  const u =
+    document.getElementById(
+      'new-user'
+    ).value.trim();
+
+  const p =
+    document.getElementById(
+      'new-pass'
+    ).value;
+
+  const cp =
+    document.getElementById(
+      'confirm-pass'
+    ).value;
+
+  if (!u) {
+    alert('❌ أدخل اسم المستخدم');
+    return;
+  }
+
+  if (p) {
+
+    if (p !== cp) {
+      alert(
+        '❌ كلمة المرور وتأكيدها غير متطابقين!'
+      );
+      return;
+    }
+
+    ADMIN.pass = p;
+  }
+
+  ADMIN.user = u;
+
+  save();
+
+  alert(
+    '✅ تم حفظ كلمة مرور وبيانات الأدمن بنجاح!'
+  );
+
+  renderSettings();
+}
+
+function changeYoussefCredentials() {
+
+  const yp =
+    document.getElementById(
+      'new-youssef-pass'
+    ).value;
+
+  const cyp =
+    document.getElementById(
+      'confirm-youssef-pass'
+    ).value;
+
+  if (!yp) {
+    alert(
+      '❌ أدخل كلمة المرور الجديدة لقسم كابتن يوسف'
+    );
+    return;
+  }
+
+  if (yp !== cyp) {
+    alert(
+      '❌ كلمة المرور وتأكيدها لقسم كابتن يوسف غير متطابقين!'
+    );
+    return;
+  }
+
+  ADMIN.youssefPass = yp;
+
+  save();
+
+  alert(
+    '✅ تم حفظ كلمة المرور المخصصة لقسم كابتن يوسف بنجاح!'
+  );
+
+  renderSettings();
+}
+
+function savePrices() {
+
+  for (let key in SUB_PRICES) {
+
+    const input =
+      document.getElementById(
+        `price-${key}`
+      );
+
+    if (!input) continue;
+
+    const val =
+      +input.value;
+
+    if (val >= 0) {
+      SUB_PRICES[key] = val;
+    }
+  }
+
+  save();
+
+  alert(
+    '✅ تم حفظ تعديلات الأسعار بنجاح!'
+  );
+}
+
+function clearAttendance() {
+
+  if (
+    confirm(
+      'هل أنت تأكد من تصفير سجل الحضور اليومي للمتواجدين بالكامل؟'
+    )
+  ) {
+
+    members.forEach(m => {
+      m.present = false;
+      m.checkIn = null;
+      m.checkOut = null;
+    });
+
+    staff.forEach(s => {
+      s.present = false;
+      s.checkIn = null;
+      s.checkOut = null;
+    });
+
+    attLog = [];
+
+    save();
+
+    alert(
+      '✅ تم تصفير سجل الحضور والغياب اليومي'
+    );
+
+    renderDashboard();
     renderAttMembers();
     renderAttStaff();
     renderAttLog();
   }
-
-  else if (name === 'days-log') {
-    renderDaysLog();
-  }
-
-  else if (name === 'finance') {
-    renderFinance();
-  }
-
-  else if (name === 'youssef') {
-    renderYoussefSection();
-  }
-
-  else if (name === 'settings') {
-    renderSettings();
-  }
-
 }
 
+function resetAll() {
 
-/* =========================================================
-   DASHBOARD
-========================================================= */
+  const p =
+    prompt(
+      '⚠️ تحذير: هذا الخيار سيمسح جميع البيانات والاشتراكات! أدخل كلمة مرور المسؤول للتأكيد:'
+    );
+
+  if (p === ADMIN.pass) {
+
+    indexedDB.deleteDatabase(
+      "SharkGymDB"
+    );
+
+    localStorage.clear();
+    sessionStorage.clear();
+
+    alert(
+      '✅ تم إعادة ضبط النظام بالكامل. سيتم إعادة تحميل الصفحة.'
+    );
+
+    location.reload();
+
+  } else if (p !== null) {
+
+    alert(
+      '❌ كلمة المرور غير صحيحة!'
+    );
+  }
+}
+
+// =====================================================
+// DASHBOARD
+// =====================================================
 
 function renderDashboard() {
 
-  const todayDate = today();
-
-  const todayPaymentsList =
-    payments.filter(
-      p => p.date === todayDate
-    );
-
-  const todayIncome =
-    todayPaymentsList.reduce(
-      (a, p) => a + Number(p.amount || 0),
-      0
-    );
-
-  const activeMembers =
+  const active =
     members.filter(
       m => daysLeft(m.end) >= 0
     ).length;
 
-  const presentMembers =
-    members.filter(
-      m => m.present
-    );
-
-  const totalDebt =
-    members.reduce(
-      (a, m) =>
-        a +
-        Math.max(
-          0,
-          Number(m.price || 0) -
-          Number(m.paid || 0)
-        ),
-      0
-    );
-
   const expiring =
     members.filter(
-      m => {
-        const d = daysLeft(m.end);
-        return d >= 0 && d <= 7;
-      }
-    );
+      m =>
+        daysLeft(m.end) >= 0 &&
+        daysLeft(m.end) <= 7
+    ).length;
+
+  const debts =
+    members.filter(
+      m =>
+        Number(m.paid || 0) <
+        Number(m.price || 0)
+    ).length;
+
+  const present =
+    members.filter(
+      m => m.present
+    ).length;
+
+  const sPresent =
+    staff.filter(
+      s => s.present
+    ).length;
 
   document.getElementById(
     'dash-stats'
   ).innerHTML = `
 
-    <div class="stat-card info">
-      <div class="stat-num">${fmt(members.length)}</div>
-      <div class="stat-lbl">إجمالي الأعضاء</div>
+    <div class="stat-card">
+      <div class="stat-num">
+        ${members.length}
+      </div>
+      <div class="stat-lbl">
+        إجمالي الأعضاء
+      </div>
     </div>
 
     <div class="stat-card success">
-      <div class="stat-num">${fmt(activeMembers)}</div>
-      <div class="stat-lbl">الأعضاء النشطون</div>
+      <div class="stat-num">
+        ${active}
+      </div>
+      <div class="stat-lbl">
+        اشتراكات نشطة
+      </div>
     </div>
 
     <div class="stat-card warn">
-      <div class="stat-num">${fmt(presentMembers.length)}</div>
-      <div class="stat-lbl">المتواجدون الآن</div>
+      <div class="stat-num">
+        ${expiring}
+      </div>
+      <div class="stat-lbl">
+        تنتهي قريباً
+      </div>
     </div>
 
-    <div class="stat-card success">
-      <div class="stat-num">${fmt(todayIncome)} ج.م</div>
-      <div class="stat-lbl">إيرادات اليوم</div>
+    <div class="stat-card danger">
+      <div class="stat-num">
+        ${debts}
+      </div>
+      <div class="stat-lbl">
+        ديون ومستحقات
+      </div>
     </div>
 
+    <div class="stat-card info">
+      <div class="stat-num">
+        ${present}
+      </div>
+      <div class="stat-lbl">
+        أعضاء بالجيم
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-num">
+        ${sPresent}
+      </div>
+      <div class="stat-lbl">
+        موظفون الآن
+      </div>
+    </div>
   `;
 
+  const exp =
+    members.filter(
+      m =>
+        daysLeft(m.end) >= 0 &&
+        daysLeft(m.end) <= 7
+    );
 
   document.getElementById(
     'dash-expiring'
-  ).innerHTML = expiring.length
+  ).innerHTML = exp.length
 
-    ? expiring.map(m => {
+    ? exp.map(m => {
 
-        const d = daysLeft(m.end);
+        const cleanPhone =
+          m.phone
+            ? String(m.phone)
+                .replace(/[^0-9]/g, '')
+            : '';
+
+        const waPhone =
+          cleanPhone.startsWith('0')
+            ? '2' + cleanPhone
+            : cleanPhone;
+
+        const msg =
+          encodeURIComponent(
+            `أهلاً بك يا ${m.name} 👋🏼\n` +
+            `نود تذكيرك بأن اشتراكك في Shark Gym ينتهي خلال ${daysLeft(m.end)} أيام (بتاريخ ${m.end}).\n` +
+            `يسعدنا تجديد اشتراكك للاستمرار في التمرين! 💪🏼🦈`
+          );
 
         return `
           <div class="att-row">
 
             <div>
+
               <div class="att-name">
-                ${escapeHtml(m.name)}
+                ${m.name}
+                (${m.phone || 'بدون رقم'})
               </div>
 
               <div class="att-sub">
-                ${d === 0 ? 'ينتهي اليوم' : `متبقي ${d} يوم`}
+                ينتهي بعد ${daysLeft(m.end)}
+                يوم (${m.end})
               </div>
+
             </div>
 
-            <span class="badge badge-warn">
-              ${escapeHtml(m.end)}
-            </span>
+            <div
+              style="display:flex;gap:6px"
+            >
+
+              ${
+                m.phone
+                ?
+                `
+                <a
+                  href="https://wa.me/${waPhone}?text=${msg}"
+                  target="_blank"
+                  class="btn btn-sm btn-whatsapp"
+                >
+                  💬 واتساب
+                </a>
+                `
+                : ''
+              }
+
+              <button
+                class="btn btn-sm btn-warn"
+                onclick="openRenew(${members.indexOf(m)})"
+              >
+                🔄 تجديد
+              </button>
+
+            </div>
 
           </div>
         `;
 
       }).join('')
 
-    : '<div class="empty">لا توجد اشتراكات ستنتهي خلال 7 أيام</div>';
+    : `
+      <div class="empty">
+        لا توجد اشتراكات تنتهي قريباً
+      </div>
+    `;
 
-
-  const debtMembers =
+  const dbList =
     members.filter(
       m =>
         Number(m.paid || 0) <
@@ -730,75 +966,134 @@ function renderDashboard() {
 
   document.getElementById(
     'dash-debt'
-  ).innerHTML = debtMembers.length
+  ).innerHTML = dbList.length
 
-    ? debtMembers.slice(0, 10).map(m => {
+    ? dbList.map(m => `
+        <div class="att-row">
 
-        const debt =
-          Number(m.price || 0) -
-          Number(m.paid || 0);
+          <div>
 
-        return `
-          <div class="att-row">
-
-            <div>
-              <div class="att-name">
-                ${escapeHtml(m.name)}
-              </div>
-
-              <div class="att-sub">
-                المتبقي: ${fmt(debt)} ج.م
-              </div>
+            <div class="att-name">
+              ${m.name}
             </div>
 
-            <span class="badge badge-danger">
-              ${fmt(debt)} ج.م
-            </span>
+            <div
+              class="att-sub"
+              style="color:var(--danger)"
+            >
+              متبقي:
+              ${fmt(
+                Number(m.price || 0) -
+                Number(m.paid || 0)
+              )}
+              ج.م
+            </div>
 
           </div>
-        `;
 
-      }).join('')
+          <button
+            class="btn btn-sm btn-danger"
+            onclick="openPay(${members.indexOf(m)})"
+          >
+            💳 تحصيل
+          </button>
 
-    : '<div class="empty">لا توجد ديون مستحقة</div>';
+        </div>
+      `).join('')
 
+    : `
+      <div class="empty">
+        لا توجد ديون مستحقة
+      </div>
+    `;
+
+  const pres =
+    members.filter(
+      m => m.present
+    );
+
+  const sprPresent =
+    staff.filter(
+      s => s.present
+    );
+
+  let presHtml = '';
+
+  if (
+    pres.length ||
+    sprPresent.length
+  ) {
+
+    pres.forEach(m => {
+
+      presHtml += `
+        <div class="att-row">
+
+          <div>
+
+            <div class="att-name">
+              👤 ${m.name}
+            </div>
+
+            <div class="att-sub">
+              دخل الساعة ${m.checkIn}
+            </div>
+
+          </div>
+
+          <span class="badge badge-success">
+            عضو
+          </span>
+
+        </div>
+      `;
+
+    });
+
+    sprPresent.forEach(s => {
+
+      presHtml += `
+        <div class="att-row">
+
+          <div>
+
+            <div class="att-name">
+              🏋️ ${s.name}
+            </div>
+
+            <div class="att-sub">
+              ${s.role}
+              — دخل الساعة ${s.checkIn}
+            </div>
+
+          </div>
+
+          <span class="badge badge-purple">
+            موظف
+          </span>
+
+        </div>
+      `;
+
+    });
+
+  } else {
+
+    presHtml = `
+      <div class="empty">
+        لا يوجد أحد داخل الجيم الآن
+      </div>
+    `;
+  }
 
   document.getElementById(
     'dash-present'
-  ).innerHTML = presentMembers.length
-
-    ? presentMembers.map(m => {
-
-        return `
-          <div class="att-row">
-
-            <div>
-              <div class="att-name">
-                ${escapeHtml(m.name)}
-              </div>
-
-              <div class="att-sub">
-                دخول: ${m.checkIn || '—'}
-              </div>
-            </div>
-
-            <span class="badge badge-success">
-              داخل الجيم
-            </span>
-
-          </div>
-        `;
-
-      }).join('')
-
-    : '<div class="empty">لا يوجد أعضاء داخل الجيم حالياً</div>';
-
+  ).innerHTML = presHtml;
 }
 
-
-/* =========================================================
-   MEMBERS
-========================================================= */
+// =====================================================
+// MEMBERS
+// =====================================================
 
 function renderMembers() {
 
@@ -807,158 +1102,197 @@ function renderMembers() {
       document.getElementById(
         'member-search'
       )?.value || ''
-    ).trim().toLowerCase();
+    ).trim();
 
   const list =
     members.filter(m => {
 
-      if (!q) return true;
+      const name =
+        String(m.name || '');
+
+      const phone =
+        String(m.phone || '');
 
       return (
-        String(m.name || '')
-          .toLowerCase()
-          .includes(q) ||
-
-        String(m.phone || '')
-          .includes(q)
+        !q ||
+        name.includes(q) ||
+        phone.includes(q)
       );
-
     });
-
-
-  const table =
-    document.getElementById(
-      'members-table'
-    );
-
-  if (!table) return;
-
 
   if (!list.length) {
 
-    table.innerHTML = `
+    document.getElementById(
+      'members-table'
+    ).innerHTML = `
       <tr>
         <td colspan="12">
           <div class="empty">
-            لا توجد بيانات مطابقة
+            لا توجد نتائج
           </div>
         </td>
       </tr>
     `;
 
     return;
-
   }
 
+  document.getElementById(
+    'members-table'
+  ).innerHTML = list.map(m => {
 
-  table.innerHTML =
-    list.map(m => {
+    const idx =
+      members.indexOf(m);
 
-      const idx =
-        members.indexOf(m);
+    const st =
+      memberStatus(m);
 
-      const status =
-        memberStatus(m);
+    const dl =
+      daysLeft(m.end);
 
-      const remaining =
-        Math.max(
-          0,
-          Number(m.price || 0) -
-          Number(m.paid || 0)
-        );
+    const debt =
+      Number(m.price || 0) -
+      Number(m.paid || 0);
 
-      return `
-        <tr>
+    const subName =
+      m.sub === 'private'
+        ? `برايفت (${m.coach || 'كابتن'})`
+        : (SUB_LABELS[m.sub] || m.sub);
 
-          <td>${idx + 1}</td>
+    return `
+      <tr
+        class="${
+          dl < 0
+            ? 'tr-danger'
+            : dl <= 7
+              ? 'tr-warn'
+              : ''
+        }"
+      >
 
-          <td>
-            <b>${escapeHtml(m.name)}</b>
-          </td>
+        <td>
+          ${idx + 1}
+        </td>
 
-          <td>
-            ${escapeHtml(m.phone || '—')}
-          </td>
+        <td>
+          <b>${m.name}</b>
+        </td>
 
-          <td>
-            ${escapeHtml(m.age || '—')}
-          </td>
+        <td>
+          ${m.phone || '—'}
+        </td>
 
-          <td>
-            <span class="badge badge-info">
-              ${escapeHtml(
-                SUB_LABELS[m.sub] || m.sub
-              )}
-            </span>
-          </td>
+        <td>
+          ${m.age || '-'}
+        </td>
 
-          <td>${escapeHtml(m.start || '—')}</td>
+        <td>
+          <span class="badge badge-info">
+            ${subName}
+          </span>
+        </td>
 
-          <td>${escapeHtml(m.end || '—')}</td>
+        <td>
+          ${m.start || '—'}
+        </td>
 
-          <td>${fmt(m.price)} ج.م</td>
+        <td>
+          ${m.end || '—'}
+        </td>
 
-          <td>${fmt(m.paid)} ج.م</td>
+        <td>
+          ${fmt(m.price)} ج.م
+        </td>
 
-          <td>
-            <span style="color:${remaining > 0 ? 'var(--danger)' : 'var(--success)'};font-weight:700">
-              ${fmt(remaining)} ج.م
-            </span>
-          </td>
+        <td
+          style="color:var(--success)"
+        >
+          ${fmt(m.paid)} ج.م
+        </td>
 
-          <td>
-            <span class="badge ${status.cls}">
-              ${status.label}
-            </span>
-          </td>
+        <td>
 
-          <td>
+          ${
+            debt > 0
 
-            <div style="display:flex;gap:5px;flex-wrap:wrap">
+            ? `
+              <span
+                style="
+                  color:var(--danger);
+                  font-weight:700
+                "
+              >
+                ${fmt(debt)} ج.م
+              </span>
+            `
 
+            : `
+              <span
+                style="
+                  color:var(--success)
+                "
+              >
+                ✅ مكتمل
+              </span>
+            `
+          }
+
+        </td>
+
+        <td>
+
+          <span
+            class="badge ${st.cls}"
+          >
+            ${st.label}
+          </span>
+
+        </td>
+
+        <td>
+
+          <button
+            class="btn btn-sm btn-ghost"
+            onclick="editMember(${idx})"
+          >
+            ✏️
+          </button>
+
+          <button
+            class="btn btn-sm btn-ghost"
+            onclick="openRenew(${idx})"
+          >
+            🔄
+          </button>
+
+          ${
+            debt > 0
+            ? `
               <button
                 class="btn btn-sm btn-ghost"
-                onclick="openEditMember(${idx})"
-              >
-                ✏️
-              </button>
-
-              <button
-                class="btn btn-sm btn-success"
                 onclick="openPay(${idx})"
               >
                 💳
               </button>
+            `
+            : ''
+          }
 
-              <button
-                class="btn btn-sm btn-primary"
-                onclick="openRenew(${idx})"
-              >
-                🔄
-              </button>
+          <button
+            class="btn btn-sm btn-ghost"
+            onclick="deleteMemberProtected(${idx})"
+            style="color:var(--danger)"
+          >
+            🗑️
+          </button>
 
-              <button
-                class="btn btn-sm btn-danger"
-                onclick="deleteMember(${idx})"
-              >
-                🗑️
-              </button>
+        </td>
 
-            </div>
+      </tr>
+    `;
 
-          </td>
-
-        </tr>
-      `;
-
-    }).join('');
-
+  }).join('');
 }
-
-
-/* =========================================================
-   MEMBER MODAL
-========================================================= */
 
 function openAddMember() {
 
@@ -972,18 +1306,20 @@ function openAddMember() {
   [
     'm-name',
     'm-phone',
+    'm-notes',
     'm-age',
-    'm-coach',
-    'm-notes'
+    'm-paid',
+    'm-coach'
   ].forEach(id => {
 
     const el =
       document.getElementById(id);
 
-    if (el) el.value = '';
+    if (el) {
+      el.value = '';
+    }
 
   });
-
 
   document.getElementById(
     'm-gender'
@@ -994,98 +1330,108 @@ function openAddMember() {
   ).value = 'monthly';
 
   document.getElementById(
-    'm-price'
-  ).value =
-    SUB_PRICES.monthly;
-
-  document.getElementById(
-    'm-paid'
-  ).value = 0;
-
-  const d = today();
-
-  document.getElementById(
     'm-start'
-  ).value = d;
+  ).value = today();
 
   document.getElementById(
     'm-end'
   ).value =
     addDays(
-      d,
-      SUB_DAYS.monthly
+      today(),
+      30
     );
 
-  updateRemaining();
   onSubChange();
 
   document.getElementById(
     'modal-member'
   ).classList.add('open');
-
 }
 
-
-function openEditMember(idx) {
-
-  const m = members[idx];
-
-  if (!m) return;
+function editMember(idx) {
 
   editMemberIdx = idx;
+
+  const m =
+    members[idx];
 
   document.getElementById(
     'modal-member-title'
   ).textContent =
     '✏️ تعديل بيانات العضو';
 
-  document.getElementById('m-name').value =
+  document.getElementById(
+    'm-name'
+  ).value =
     m.name || '';
 
-  document.getElementById('m-phone').value =
+  document.getElementById(
+    'm-phone'
+  ).value =
     m.phone || '';
 
-  document.getElementById('m-age').value =
+  document.getElementById(
+    'm-age'
+  ).value =
     m.age || '';
 
-  document.getElementById('m-gender').value =
+  document.getElementById(
+    'm-gender'
+  ).value =
     m.gender || 'ذكر';
 
-  document.getElementById('m-sub').value =
+  document.getElementById(
+    'm-sub'
+  ).value =
     m.sub || 'monthly';
 
-  document.getElementById('m-price').value =
-    Number(m.price || 0);
-
-  document.getElementById('m-coach').value =
+  document.getElementById(
+    'm-coach'
+  ).value =
     m.coach || '';
 
-  document.getElementById('m-start').value =
+  document.getElementById(
+    'm-start'
+  ).value =
     m.start || today();
 
-  document.getElementById('m-end').value =
-    m.end || addDays(
-      today(),
-      SUB_DAYS[m.sub] || 30
+  document.getElementById(
+    'm-end'
+  ).value =
+    m.end || addDays(today(),30);
+
+  document.getElementById(
+    'm-price'
+  ).value =
+    m.price || 0;
+
+  document.getElementById(
+    'm-paid'
+  ).value =
+    m.paid || 0;
+
+  document.getElementById(
+    'm-remaining'
+  ).value =
+    Math.max(
+      0,
+      Number(m.price || 0) -
+      Number(m.paid || 0)
     );
 
-  document.getElementById('m-paid').value =
-    Number(m.paid || 0);
-
-  document.getElementById('m-notes').value =
+  document.getElementById(
+    'm-notes'
+  ).value =
     m.notes || '';
 
-  onSubChange();
-  updateRemaining();
+  onSubChange(true);
 
   document.getElementById(
     'modal-member'
   ).classList.add('open');
-
 }
 
-
-function onSubChange() {
+function onSubChange(isEdit = false) {
 
   const sub =
     document.getElementById(
@@ -1097,69 +1443,86 @@ function onSubChange() {
       'coach-field-group'
     );
 
+  const priceInput =
+    document.getElementById(
+      'm-price'
+    );
+
   if (sub === 'private') {
 
-    coachGroup.style.display = 'grid';
+    coachGroup.style.display =
+      'block';
+
+    priceInput.readOnly =
+      false;
+
+    priceInput.style.background =
+      '#fff';
+
+    if (!isEdit) {
+      priceInput.value =
+        SUB_PRICES.private || 500;
+    }
 
   } else {
 
-    coachGroup.style.display = 'none';
+    coachGroup.style.display =
+      'none';
 
-  }
+    priceInput.readOnly =
+      false;
 
-  if (
-    editMemberIdx === -1
-  ) {
+    priceInput.style.background =
+      '#fff';
 
-    document.getElementById(
-      'm-price'
-    ).value =
-      SUB_PRICES[sub] || 0;
+    if (!isEdit) {
+      priceInput.value =
+        SUB_PRICES[sub] || 0;
+    }
 
     const start =
       document.getElementById(
         'm-start'
-      ).value || today();
+      ).value;
 
-    document.getElementById(
-      'm-end'
-    ).value =
-      addDays(
-        start,
-        SUB_DAYS[sub] || 30
-      );
+    if (
+      start &&
+      !isEdit
+    ) {
 
+      document.getElementById(
+        'm-end'
+      ).value =
+        addDays(
+          start,
+          SUB_DAYS[sub]
+        );
+    }
   }
 
   updateRemaining();
-
 }
-
 
 function updateRemaining() {
 
   const price =
-    Number(
-      document.getElementById(
-        'm-price'
-      ).value
-    ) || 0;
+    +document.getElementById(
+      'm-price'
+    ).value || 0;
 
   const paid =
-    Number(
-      document.getElementById(
-        'm-paid'
-      ).value
-    ) || 0;
+    +document.getElementById(
+      'm-paid'
+    ).value || 0;
 
   document.getElementById(
     'm-remaining'
   ).value =
-    Math.max(0, price - paid);
-
+    Math.max(
+      0,
+      price - paid
+    );
 }
-
-
 function saveMember() {
 
   const name =
@@ -1167,80 +1530,60 @@ function saveMember() {
       'm-name'
     ).value.trim();
 
-  if (!name) {
-
-    alert('❌ اكتب اسم العضو');
-
-    return;
-
-  }
-
   const phone =
     document.getElementById(
       'm-phone'
     ).value.trim();
 
-  const age =
-    Number(
-      document.getElementById(
-        'm-age'
-      ).value
-    ) || '';
+  if (!name) {
+    alert(
+      'برجاء إدخال الاسم الكامل'
+    );
+    return;
+  }
 
-  const gender =
-    document.getElementById(
-      'm-gender'
-    ).value;
+  if (
+    !phone ||
+    phone.length < 11
+  ) {
+    alert(
+      '❌ رقم الهاتف يجب ألا يقل عن 11 رقم!'
+    );
+    return;
+  }
 
   const sub =
     document.getElementById(
       'm-sub'
     ).value;
 
-  const price =
-    Math.max(
-      0,
-      Number(
-        document.getElementById(
-          'm-price'
-        ).value
-      ) || 0
-    );
-
-  const paid =
-    Math.max(
-      0,
-      Number(
-        document.getElementById(
-          'm-paid'
-        ).value
-      ) || 0
-    );
-
   const start =
     document.getElementById(
       'm-start'
-    ).value || today();
+    ).value;
 
   const end =
     document.getElementById(
       'm-end'
-    ).value ||
-    addDays(
-      start,
-      SUB_DAYS[sub] || 30
+    ).value;
+
+  const price =
+    +document.getElementById(
+      'm-price'
+    ).value || 0;
+
+  const paid =
+    Math.min(
+      price,
+      +document.getElementById(
+        'm-paid'
+      ).value || 0
     );
 
   const coach =
     document.getElementById(
       'm-coach'
     ).value.trim();
-
-  const notes =
-    document.getElementById(
-      'm-notes'
-    ).value.trim();
-
 
   const isEditing =
     editMemberIdx >= 0;
@@ -1250,67 +1593,65 @@ function saveMember() {
       ? members[editMemberIdx]
       : null;
 
-
   const oldPaid =
-    Number(
-      oldMember?.paid || 0
-    );
+    oldMember
+      ? Number(oldMember.paid || 0)
+      : 0;
 
+  const mId =
+    isEditing
+      ? oldMember.id
+      : Date.now();
 
-  const member = {
-
-    id:
-      oldMember?.id ||
-      (
-        Date.now() +
-        Math.floor(
-          Math.random() * 10000
-        )
-      ),
-
+  const obj = {
+    id: mId,
     name,
     phone,
-    age,
-    gender,
+    age:
+      +document.getElementById(
+        'm-age'
+      ).value || 0,
+
+    gender:
+      document.getElementById(
+        'm-gender'
+      ).value,
+
     sub,
-    price,
-    paid,
+    coach,
     start,
     end,
-    coach,
-    notes,
+    price,
+    paid,
 
-    present:
-      oldMember?.present || false,
-
-    checkIn:
-      oldMember?.checkIn || null,
-
-    checkOut:
-      oldMember?.checkOut || null
-
+    notes:
+      document.getElementById(
+        'm-notes'
+      ).value
   };
-
 
   if (isEditing) {
 
-    members[editMemberIdx] =
-      member;
+    Object.assign(
+      members[editMemberIdx],
+      obj
+    );
 
   } else {
 
-    members.push(member);
+    members.push({
+      ...obj,
+      present:false,
+      checkIn:null,
+      checkOut:null
+    });
 
   }
 
-
   /*
     مهم:
-    لو عدلنا بيانات عضو موجود بالفعل
-    لا نسجل نفس المدفوع مرة أخرى.
-
-    يتم تسجيل الفرق فقط لو زاد
-    المبلغ المدفوع فعلياً.
+    لو عدلنا بيانات العضو فقط لا نسجل دفعة جديدة.
+    نسجل فقط الزيادة الجديدة في المدفوع.
   */
 
   const newPaymentAmount =
@@ -1321,7 +1662,6 @@ function saveMember() {
         )
       : paid;
 
-
   if (newPaymentAmount > 0) {
 
     payments.push({
@@ -1330,9 +1670,11 @@ function saveMember() {
         Date.now() +
         Math.random(),
 
-      memberId: member.id,
+      memberId:
+        mId,
 
-      memberName: member.name,
+      memberName:
+        name,
 
       sub:
         sub === 'private'
@@ -1344,237 +1686,119 @@ function saveMember() {
 
       date:
         today()
+    });
+  }
 
+  save();
+
+  closeModal(
+    'modal-member'
+  );
+
+  renderMembers();
+  renderDashboard();
+  renderFinance();
+  renderYoussefSection();
+}
+
+function deleteMemberProtected(idx) {
+
+  const password =
+    prompt(
+      `أدخل باسورد المسؤول لتأكيد حذف العضو "${members[idx].name}":`
+    );
+
+  if (
+    password === ADMIN.pass ||
+    password === ADMIN.youssefPass
+  ) {
+
+    const deleted =
+      members.splice(
+        idx,
+        1
+      )[0];
+
+    trashBin.push({
+      type:'عضو / اشتراك',
+      item:deleted,
+      deletedAt:today()
     });
 
+    save();
+
+    renderMembers();
+    renderDashboard();
+    renderFinance();
+    renderTrashBin();
+
+  } else if (
+    password !== null
+  ) {
+
+    alert(
+      'الباسورد غلط!'
+    );
   }
-
-
-  save();
-
-  closeModal('modal-member');
-
-  renderMembers();
-
-  renderDashboard();
-
-  renderFinance();
-
 }
 
-
-/* =========================================================
-   PAYMENT
-========================================================= */
-
-function openPay(idx) {
-
-  editPayIdx = idx;
-
-  const m = members[idx];
-
-  if (!m) return;
-
-  const remaining =
-    Math.max(
-      0,
-      Number(m.price || 0) -
-      Number(m.paid || 0)
-    );
-
-  document.getElementById(
-    'pay-info'
-  ).innerHTML = `
-
-    <div style="line-height:1.8">
-
-      <b>العضو:</b>
-      ${escapeHtml(m.name)}
-      <br>
-
-      <b>المبلغ الكلي:</b>
-      ${fmt(m.price)} ج.م
-      <br>
-
-      <b>المدفوع:</b>
-      ${fmt(m.paid)} ج.م
-      <br>
-
-      <b>المتبقي:</b>
-      <span style="color:var(--danger)">
-        ${fmt(remaining)} ج.م
-      </span>
-
-    </div>
-
-  `;
-
-  document.getElementById(
-    'pay-amount'
-  ).value =
-    remaining;
-
-  document.getElementById(
-    'modal-pay'
-  ).classList.add('open');
-
-}
-
-
-function savePayment() {
-
-  const m =
-    members[editPayIdx];
-
-  if (!m) return;
-
-  const amt =
-    Number(
-      document.getElementById(
-        'pay-amount'
-      ).value
-    ) || 0;
-
-  if (amt <= 0) {
-
-    alert('❌ أدخل مبلغ صحيح');
-
-    return;
-
-  }
-
-  const remaining =
-    Math.max(
-      0,
-      Number(m.price || 0) -
-      Number(m.paid || 0)
-    );
-
-  const actualAmount =
-    Math.min(
-      amt,
-      remaining
-    );
-
-  if (actualAmount <= 0) {
-
-    alert('⚠️ لا يوجد مبلغ متبقي على العضو');
-
-    return;
-
-  }
-
-  m.paid =
-    Number(m.paid || 0) +
-    actualAmount;
-
-
-  payments.push({
-
-    id:
-      Date.now() +
-      Math.random(),
-
-    memberId:
-      m.id,
-
-    memberName:
-      m.name,
-
-    sub:
-      m.sub === 'private'
-        ? `برايفت (${m.coach || 'كابتن'})`
-        : SUB_LABELS[m.sub],
-
-    amount:
-      actualAmount,
-
-    date:
-      today()
-
-  });
-
-
-  save();
-
-  closeModal('modal-pay');
-
-  renderMembers();
-
-  renderDashboard();
-
-  renderFinance();
-
-}
-
-
-/* =========================================================
-   RENEW
-========================================================= */
+// =====================================================
+// RENEW & PAYMENTS
+// =====================================================
 
 function openRenew(idx) {
+
+  editRenewIdx = idx;
 
   const m =
     members[idx];
 
-  if (!m) return;
-
-  editRenewIdx = idx;
-
   document.getElementById(
     'renew-info'
   ).innerHTML = `
-    <b>العضو:</b>
-    ${escapeHtml(m.name)}
-    <br>
+    <b>العضو:</b> ${m.name}<br>
     <b>الاشتراك الحالي:</b>
-    ${escapeHtml(
-      SUB_LABELS[m.sub] || m.sub
-    )}
+    ${
+      m.sub === 'private'
+        ? `برايفت (${m.coach || 'كابتن'})`
+        : (SUB_LABELS[m.sub] || m.sub)
+    }
+    <br>
+    <b>ينتهي في:</b> ${m.end}
   `;
 
   document.getElementById(
     'r-sub'
   ).value =
-    m.sub || 'monthly';
-
-  document.getElementById(
-    'r-price'
-  ).value =
-    SUB_PRICES[m.sub] || m.price || 0;
+    'monthly';
 
   document.getElementById(
     'r-paid'
-  ).value = 0;
+  ).value = '';
 
-  const start = today();
+  document.getElementById(
+    'r-coach'
+  ).value = '';
 
   document.getElementById(
     'r-start'
-  ).value = start;
+  ).value =
+    today();
 
   document.getElementById(
     'r-end'
   ).value =
     addDays(
-      start,
-      SUB_DAYS[m.sub] || 30
+      today(),
+      30
     );
 
-  document.getElementById(
-    'r-coach'
-  ).value =
-    m.coach || '';
-
   onRenewSubChange();
-  updateRenewRemaining();
 
   document.getElementById(
     'modal-renew'
   ).classList.add('open');
-
 }
-
 
 function onRenewSubChange() {
 
@@ -1588,56 +1812,56 @@ function onRenewSubChange() {
       'r-coach-field-group'
     );
 
+  const priceInput =
+    document.getElementById(
+      'r-price'
+    );
+
   if (sub === 'private') {
 
     coachGroup.style.display =
-      'grid';
+      'block';
+
+    priceInput.value =
+      SUB_PRICES.private || 500;
 
   } else {
 
     coachGroup.style.display =
       'none';
 
+    priceInput.value =
+      SUB_PRICES[sub] || 0;
+
+    const start =
+      document.getElementById(
+        'r-start'
+      ).value ||
+      today();
+
+    document.getElementById(
+      'r-end'
+    ).value =
+      addDays(
+        start,
+        SUB_DAYS[sub]
+      );
   }
 
-  document.getElementById(
-    'r-price'
-  ).value =
-    SUB_PRICES[sub] || 0;
-
-  const start =
-    document.getElementById(
-      'r-start'
-    ).value || today();
-
-  document.getElementById(
-    'r-end'
-  ).value =
-    addDays(
-      start,
-      SUB_DAYS[sub] || 30
-    );
-
   updateRenewRemaining();
-
 }
-
 
 function updateRenewRemaining() {
 
   const price =
-    Number(
-      document.getElementById(
-        'r-price'
-      ).value
-    ) || 0;
+    +document.getElementById(
+      'r-price'
+    ).value || 0;
 
   const paid =
-    Number(
-      document.getElementById(
-        'r-paid'
-      ).value
-    ) || 0;
+    +document.getElementById(
+      'r-paid'
+    ).value || 0;
 
   document.getElementById(
     'r-remaining'
@@ -1646,16 +1870,19 @@ function updateRenewRemaining() {
       0,
       price - paid
     );
-
 }
-
 
 function saveRenew() {
 
   const m =
     members[editRenewIdx];
 
-  if (!m) return;
+  if (!m) {
+    alert(
+      '❌ العضو غير موجود'
+    );
+    return;
+  }
 
   const sub =
     document.getElementById(
@@ -1663,56 +1890,50 @@ function saveRenew() {
     ).value;
 
   const price =
-    Math.max(
-      0,
-      Number(
-        document.getElementById(
-          'r-price'
-        ).value
-      ) || 0
-    );
+    +document.getElementById(
+      'r-price'
+    ).value || 0;
 
   const paid =
-    Math.max(
-      0,
-      Number(
-        document.getElementById(
-          'r-paid'
-        ).value
-      ) || 0
+    Math.min(
+      price,
+      +document.getElementById(
+        'r-paid'
+      ).value || 0
     );
 
   const start =
     document.getElementById(
       'r-start'
-    ).value || today();
+    ).value;
 
   const end =
     document.getElementById(
       'r-end'
-    ).value ||
-    addDays(
-      start,
-      SUB_DAYS[sub] || 30
-    );
+    ).value;
 
   const coach =
     document.getElementById(
       'r-coach'
     ).value.trim();
 
+  m.sub =
+    sub;
 
-  m.sub = sub;
-  m.price = price;
-  m.paid = paid;
-  m.start = start;
-  m.end = end;
-  m.coach = coach;
+  m.coach =
+    coach;
 
-  m.present = false;
-  m.checkIn = null;
-  m.checkOut = null;
+  m.start =
+    start;
 
+  m.end =
+    end;
+
+  m.price =
+    price;
+
+  m.paid =
+    paid;
 
   if (paid > 0) {
 
@@ -1738,322 +1959,262 @@ function saveRenew() {
 
       date:
         today()
-
     });
-
   }
-
 
   save();
 
-  closeModal('modal-renew');
+  closeModal(
+    'modal-renew'
+  );
 
   renderMembers();
-
   renderDashboard();
-
   renderFinance();
-
+  renderYoussefSection();
 }
 
+function openPay(idx) {
 
-/* =========================================================
-   MEMBER DELETE
-========================================================= */
-
-function deleteMember(idx) {
+  editPayIdx = idx;
 
   const m =
     members[idx];
 
-  if (!m) return;
-
-  if (
-    !confirm(
-      `هل أنت متأكد من حذف العضو "${m.name}"؟`
-    )
-  ) {
+  if (!m) {
     return;
   }
 
-  trashBin.push({
+  const total =
+    Number(m.price || 0);
+
+  const paid =
+    Number(m.paid || 0);
+
+  const remaining =
+    Math.max(
+      0,
+      total - paid
+    );
+
+  document.getElementById(
+    'pay-info'
+  ).innerHTML = `
+    <b>العضو:</b> ${m.name}<br>
+    <b>المبلغ الكلي:</b>
+    ${fmt(total)} ج.م<br>
+    <b>المدفوع:</b>
+    ${fmt(paid)} ج.م<br>
+    <b>المتبقي:</b>
+    <span style="color:var(--danger)">
+      ${fmt(remaining)} ج.م
+    </span>
+  `;
+
+  document.getElementById(
+    'pay-amount'
+  ).value =
+    remaining;
+
+  document.getElementById(
+    'modal-pay'
+  ).classList.add('open');
+}
+
+function savePayment() {
+
+  const m =
+    members[editPayIdx];
+
+  if (!m) {
+    alert(
+      '❌ العضو غير موجود'
+    );
+    return;
+  }
+
+  const amt =
+    +document.getElementById(
+      'pay-amount'
+    ).value || 0;
+
+  if (amt <= 0) {
+    alert(
+      'أدخل مبلغ صحيح'
+    );
+    return;
+  }
+
+  const remaining =
+    Math.max(
+      0,
+      Number(m.price || 0) -
+      Number(m.paid || 0)
+    );
+
+  const actualAmount =
+    Math.min(
+      amt,
+      remaining
+    );
+
+  if (actualAmount <= 0) {
+    alert(
+      '❌ لا يوجد مبلغ متبقي على العضو.'
+    );
+    return;
+  }
+
+  m.paid =
+    Number(m.paid || 0) +
+    actualAmount;
+
+  payments.push({
 
     id:
       Date.now() +
       Math.random(),
 
-    type: 'عضو',
+    memberId:
+      m.id,
 
-    data:
-      JSON.parse(
-        JSON.stringify(m)
-      ),
-
-    title:
+    memberName:
       m.name,
 
-    deletedAt:
+    sub:
+      m.sub === 'private'
+        ? `برايفت (${m.coach || 'كابتن'})`
+        : SUB_LABELS[m.sub],
+
+    amount:
+      actualAmount,
+
+    date:
       today()
-
   });
-
-  members.splice(idx, 1);
-
-  payments =
-    payments.filter(
-      p => p.memberId !== m.id
-    );
 
   save();
 
+  closeModal(
+    'modal-pay'
+  );
+
   renderMembers();
-
   renderDashboard();
-
   renderFinance();
-
+  renderYoussefSection();
 }
 
-
-/* =========================================================
-   ATTENDANCE
-========================================================= */
+// =====================================================
+// ATTENDANCE
+// =====================================================
 
 function renderAttMembers() {
 
   const q =
-    (
-      document.getElementById(
-        'att-search'
-      )?.value || ''
-    ).trim().toLowerCase();
+    document.getElementById(
+      'att-search'
+    )?.value || '';
 
   const list =
-    members.filter(
-      m =>
+    members.filter(m => {
+
+      const name =
+        String(m.name || '');
+
+      return (
         !q ||
-        String(m.name || '')
-          .toLowerCase()
-          .includes(q)
-    );
+        name.includes(q)
+      );
+    });
 
   const table =
     document.getElementById(
       'att-members-table'
     );
 
-  if (!table) return;
-
+  if (!table) {
+    return;
+  }
 
   table.innerHTML =
-    list.length
+    list.map(m => {
 
-      ? list.map(m => {
+      const idx =
+        members.indexOf(m);
 
-          const idx =
-            members.indexOf(m);
-
-          return `
-            <tr>
-
-              <td>
-                <b>${escapeHtml(m.name)}</b>
-              </td>
-
-              <td>
-                <span class="badge badge-info">
-                  ${escapeHtml(
-                    SUB_LABELS[m.sub] || m.sub
-                  )}
-                </span>
-              </td>
-
-              <td>
-
-                <span class="badge ${
-                  m.present
-                    ? 'badge-success'
-                    : 'badge-gray'
-                }">
-
-                  ${
-                    m.present
-                      ? '✅ داخل'
-                      : '⭕ خارج'
-                  }
-
-                </span>
-
-              </td>
-
-              <td>
-                ${m.checkIn || '—'}
-              </td>
-
-              <td>
-                ${m.checkOut || '—'}
-              </td>
-
-              <td>
-
-                ${
-                  m.present
-
-                    ? `
-                      <button
-                        class="btn btn-sm btn-danger"
-                        onclick="memberCheckOut(${idx})"
-                      >
-                        🚪 خروج
-                      </button>
-                    `
-
-                    : `
-                      <button
-                        class="btn btn-sm btn-success"
-                        onclick="memberCheckIn(${idx})"
-                      >
-                        🚶 دخول
-                      </button>
-                    `
-                }
-
-              </td>
-
-            </tr>
-          `;
-
-        }).join('')
-
-      : `
+      return `
         <tr>
-          <td colspan="6">
-            <div class="empty">
-              لا توجد أعضاء
-            </div>
+
+          <td>
+            <b>${m.name}</b>
           </td>
+
+          <td>
+            <span class="badge badge-info">
+              ${
+                m.sub === 'private'
+                  ? `برايفت (${m.coach || 'كابتن'})`
+                  : (SUB_LABELS[m.sub] || m.sub)
+              }
+            </span>
+          </td>
+
+          <td>
+            <span
+              class="badge ${
+                m.present
+                  ? 'badge-success'
+                  : 'badge-gray'
+              }"
+            >
+              ${
+                m.present
+                  ? '✅ داخل'
+                  : '⭕ خارج'
+              }
+            </span>
+          </td>
+
+          <td>
+            ${m.checkIn || '—'}
+          </td>
+
+          <td>
+            ${m.checkOut || '—'}
+          </td>
+
+          <td>
+
+            ${
+              m.present
+
+              ? `
+                <button
+                  class="btn btn-sm btn-danger"
+                  onclick="memberCheckOut(${idx})"
+                >
+                  🚪 خروج
+                </button>
+              `
+
+              : `
+                <button
+                  class="btn btn-sm btn-success"
+                  onclick="memberCheckIn(${idx})"
+                >
+                  🚶 دخول
+                </button>
+              `
+            }
+
+          </td>
+
         </tr>
       `;
 
+    }).join('');
 }
-
-
-function memberCheckIn(idx) {
-
-  const m =
-    members[idx];
-
-  if (!m) return;
-
-  if (daysLeft(m.end) < 0) {
-
-    if (
-      !confirm(
-        '⚠️ اشتراك العضو منتهي. هل تريد تسجيل الدخول على أي حال؟'
-      )
-    ) {
-      return;
-    }
-
-  }
-
-  const time =
-    nowTime();
-
-  m.present = true;
-  m.checkIn = time;
-  m.checkOut = null;
-
-
-  const existing =
-    attLog.find(
-      x =>
-        x.date === today() &&
-        x.memberId === m.id
-    );
-
-  if (existing) {
-
-    existing.checkIn = time;
-    existing.checkOut = null;
-
-  } else {
-
-    attLog.push({
-
-      id:
-        Date.now() +
-        Math.random(),
-
-      memberId:
-        m.id,
-
-      name:
-        m.name,
-
-      type:
-        'عضو',
-
-      date:
-        today(),
-
-      checkIn:
-        time,
-
-      checkOut:
-        null
-
-    });
-
-  }
-
-
-  save();
-
-  renderAttMembers();
-  renderAttLog();
-  renderDashboard();
-
-}
-
-
-function memberCheckOut(idx) {
-
-  const m =
-    members[idx];
-
-  if (!m) return;
-
-  const time =
-    nowTime();
-
-  m.present = false;
-  m.checkOut = time;
-
-
-  const log =
-    attLog.find(
-      x =>
-        x.date === today() &&
-        x.memberId === m.id &&
-        !x.checkOut
-    );
-
-  if (log) {
-
-    log.checkOut = time;
-
-  }
-
-
-  save();
-
-  renderAttMembers();
-  renderAttLog();
-  renderDashboard();
-
-}
-
 
 function renderAttStaff() {
 
@@ -2062,191 +2223,79 @@ function renderAttStaff() {
       'att-staff-table'
     );
 
-  if (!table) return;
+  if (!table) {
+    return;
+  }
 
   table.innerHTML =
-    staff.length
+    staff.map((s,i) => `
 
-      ? staff.map((s, i) => `
+      <tr>
 
-          <tr>
+        <td>
+          <b>${s.name}</b>
+        </td>
 
-            <td>
-              <b>${escapeHtml(s.name)}</b>
-            </td>
+        <td>
+          ${s.role || '—'}
+        </td>
 
-            <td>
-              ${escapeHtml(s.role || '—')}
-            </td>
+        <td>
 
-            <td>
+          <span
+            class="badge ${
+              s.present
+                ? 'badge-success'
+                : 'badge-gray'
+            }"
+          >
+            ${
+              s.present
+                ? '✅ داخل'
+                : '⭕ خارج'
+            }
+          </span>
 
-              <span class="badge ${
-                s.present
-                  ? 'badge-success'
-                  : 'badge-gray'
-              }">
+        </td>
 
-                ${
-                  s.present
-                    ? '✅ داخل'
-                    : '⭕ خارج'
-                }
+        <td>
+          ${s.checkIn || '—'}
+        </td>
 
-              </span>
+        <td>
+          ${s.checkOut || '—'}
+        </td>
 
-            </td>
+        <td>
 
-            <td>
-              ${s.checkIn || '—'}
-            </td>
+          ${
+            s.present
 
-            <td>
-              ${s.checkOut || '—'}
-            </td>
+            ? `
+              <button
+                class="btn btn-sm btn-danger"
+                onclick="staffCheckOut(${i})"
+              >
+                🚪 خروج
+              </button>
+            `
 
-            <td>
+            : `
+              <button
+                class="btn btn-sm btn-success"
+                onclick="staffCheckIn(${i})"
+              >
+                🚶 دخول
+              </button>
+            `
+          }
 
-              ${
-                s.present
+        </td>
 
-                  ? `
-                    <button
-                      class="btn btn-sm btn-danger"
-                      onclick="staffCheckOut(${i})"
-                    >
-                      🚪 خروج
-                    </button>
-                  `
+      </tr>
 
-                  : `
-                    <button
-                      class="btn btn-sm btn-success"
-                      onclick="staffCheckIn(${i})"
-                    >
-                      🚶 دخول
-                    </button>
-                  `
-              }
-
-            </td>
-
-          </tr>
-
-        `).join('')
-
-      : `
-        <tr>
-          <td colspan="6">
-            <div class="empty">
-              لا يوجد موظفون
-            </div>
-          </td>
-        </tr>
-      `;
-
+    `).join('');
 }
-
-
-function staffCheckIn(idx) {
-
-  const s =
-    staff[idx];
-
-  if (!s) return;
-
-  const time =
-    nowTime();
-
-  s.present = true;
-  s.checkIn = time;
-  s.checkOut = null;
-
-
-  const existing =
-    attLog.find(
-      x =>
-        x.date === today() &&
-        x.staffId === s.id
-    );
-
-  if (existing) {
-
-    existing.checkIn = time;
-    existing.checkOut = null;
-
-  } else {
-
-    attLog.push({
-
-      id:
-        Date.now() +
-        Math.random(),
-
-      staffId:
-        s.id,
-
-      name:
-        s.name,
-
-      type:
-        'موظف',
-
-      date:
-        today(),
-
-      checkIn:
-        time,
-
-      checkOut:
-        null
-
-    });
-
-  }
-
-
-  save();
-
-  renderAttStaff();
-  renderAttLog();
-
-}
-
-
-function staffCheckOut(idx) {
-
-  const s =
-    staff[idx];
-
-  if (!s) return;
-
-  const time =
-    nowTime();
-
-  s.present = false;
-  s.checkOut = time;
-
-
-  const log =
-    attLog.find(
-      x =>
-        x.date === today() &&
-        x.staffId === s.id &&
-        !x.checkOut
-    );
-
-  if (log) {
-    log.checkOut = time;
-  }
-
-  save();
-
-  renderAttStaff();
-  renderAttLog();
-
-}
-
 
 function renderAttLog() {
 
@@ -2255,64 +2304,249 @@ function renderAttLog() {
       'att-log-table'
     );
 
-  if (!table) return;
+  if (!table) {
+    return;
+  }
 
-  const list =
+  const todayDate =
+    today();
+
+  const todayAttLog =
     attLog.filter(
-      x => x.date === today()
+      l => l.date === todayDate
     );
 
-
   table.innerHTML =
-    list.length
+    todayAttLog
+      .slice()
+      .reverse()
+      .map((l,i) => `
 
-      ? list.map((x, i) => `
-
-          <tr>
-
-            <td>${i + 1}</td>
-
-            <td>
-              <b>${escapeHtml(x.name)}</b>
-            </td>
-
-            <td>
-              ${escapeHtml(x.type)}
-            </td>
-
-            <td>
-              ${x.checkIn || '—'}
-            </td>
-
-            <td>
-              ${x.checkOut || '—'}
-            </td>
-
-            <td>
-              ${calcDuration(
-                x.checkIn,
-                x.checkOut
-              )}
-            </td>
-
-          </tr>
-
-        `).join('')
-
-      : `
         <tr>
-          <td colspan="6">
-            <div class="empty">
-              لا يوجد سجل دخول اليوم
-            </div>
-          </td>
-        </tr>
-      `;
 
+          <td>
+            ${i + 1}
+          </td>
+
+          <td>
+            ${l.name}
+          </td>
+
+          <td>
+            <span
+              class="badge ${
+                l.type === 'عضو'
+                  ? 'badge-info'
+                  : 'badge-purple'
+              }"
+            >
+              ${l.type}
+            </span>
+          </td>
+
+          <td>
+            ${l.checkIn || '—'}
+          </td>
+
+          <td>
+            ${l.checkOut || '—'}
+          </td>
+
+          <td>
+            ${
+              l.checkOut
+                ? calcDuration(
+                    l.checkIn,
+                    l.checkOut
+                  )
+                : '—'
+            }
+          </td>
+
+        </tr>
+
+      `).join('');
+
+  if (!todayAttLog.length) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty">
+            لا يوجد سجل حضور اليوم
+          </div>
+        </td>
+      </tr>
+    `;
+  }
 }
 
+function memberCheckIn(idx) {
+
+  const m =
+    members[idx];
+
+  if (!m) return;
+
+  if (m.present) {
+    return;
+  }
+
+  m.present = true;
+  m.checkIn = nowTime();
+  m.checkOut = null;
+
+  attLog.push({
+    id:
+      Date.now() +
+      Math.random(),
+
+    name:
+      m.name,
+
+    type:
+      'عضو',
+
+    checkIn:
+      m.checkIn,
+
+    checkOut:
+      null,
+
+    date:
+      today()
+  });
+
+  save();
+
+  renderAttMembers();
+  renderAttLog();
+  renderDashboard();
+}
+
+function memberCheckOut(idx) {
+
+  const m =
+    members[idx];
+
+  if (!m) return;
+
+  m.present = false;
+  m.checkOut = nowTime();
+
+  const rec =
+    attLog
+      .filter(
+        x =>
+          x.name === m.name &&
+          x.type === 'عضو' &&
+          x.date === today() &&
+          !x.checkOut
+      )
+      .pop();
+
+  if (rec) {
+    rec.checkOut =
+      m.checkOut;
+  }
+
+  save();
+
+  renderAttMembers();
+  renderAttLog();
+  renderDashboard();
+}
+
+function staffCheckIn(idx) {
+
+  const s =
+    staff[idx];
+
+  if (!s) return;
+
+  if (s.present) {
+    return;
+  }
+
+  s.present = true;
+  s.checkIn = nowTime();
+  s.checkOut = null;
+
+  attLog.push({
+
+    id:
+      Date.now() +
+      Math.random(),
+
+    name:
+      s.name,
+
+    type:
+      'موظف',
+
+    checkIn:
+      s.checkIn,
+
+    checkOut:
+      null,
+
+    date:
+      today()
+  });
+
+  save();
+
+  renderAttStaff();
+  renderAttLog();
+  renderDashboard();
+}
+
+function staffCheckOut(idx) {
+
+  const s =
+    staff[idx];
+
+  if (!s) return;
+
+  s.present = false;
+  s.checkOut = nowTime();
+
+  const rec =
+    attLog
+      .filter(
+        x =>
+          x.name === s.name &&
+          x.type === 'موظف' &&
+          x.date === today() &&
+          !x.checkOut
+      )
+      .pop();
+
+  if (rec) {
+    rec.checkOut =
+      s.checkOut;
+  }
+
+  save();
+
+  renderAttStaff();
+  renderAttLog();
+  renderDashboard();
+}
 
 function switchAttTab(tab, btn) {
+
+  document
+    .querySelectorAll(
+      '#page-attendance .tab-btn'
+    )
+    .forEach(
+      b => b.classList.remove('active')
+    );
+
+  if (btn) {
+    btn.classList.add('active');
+  }
 
   document.getElementById(
     'att-members-section'
@@ -2335,24 +2569,18 @@ function switchAttTab(tab, btn) {
       ? 'block'
       : 'none';
 
-  document
-    .querySelectorAll(
-      '#page-attendance .tab-btn'
-    )
-    .forEach(
-      b => b.classList.remove('active')
-    );
-
-  if (btn) {
-    btn.classList.add('active');
+  if (tab === 'staff') {
+    renderAttStaff();
   }
 
+  if (tab === 'log') {
+    renderAttLog();
+  }
 }
 
-
-/* =========================================================
-   FINISH DAY
-========================================================= */
+// =====================================================
+// FINISH DAY
+// =====================================================
 
 function finishDayPrompt() {
 
@@ -2364,20 +2592,17 @@ function finishDayPrompt() {
     return;
   }
 
-
   const todayDate =
     today();
 
-
   /*
-    منع إنهاء نفس اليوم مرتين.
-    هذا مهم جداً حتى لا يتم تكرار
-    نفس الإيرادات في سجل الأيام.
+    منع تسجيل نفس اليوم مرتين.
   */
 
   if (
     daysLog.some(
-      day => day.date === todayDate
+      day =>
+        day.date === todayDate
     )
   ) {
 
@@ -2386,23 +2611,16 @@ function finishDayPrompt() {
     );
 
     return;
-
   }
-
-
-  /*
-    نأخذ فقط المدفوعات الخاصة باليوم الحالي.
-  */
 
   const todayPaymentsList =
     payments.filter(
-      p => p.date === todayDate
+      p =>
+        p.date === todayDate
     );
-
 
   const todayIncomesList =
     todayPaymentsList.map(p => ({
-
       name:
         p.memberName,
 
@@ -2411,25 +2629,22 @@ function finishDayPrompt() {
 
       amount:
         Number(p.amount) || 0
-
     }));
-
 
   const todayIncomeTotal =
     todayIncomesList.reduce(
-      (total, item) =>
-        total + item.amount,
+      (a,p) =>
+        a + p.amount,
       0
     );
-
 
   const todayExpensesList =
     expenses
       .filter(
-        e => e.date === todayDate
+        e =>
+          e.date === todayDate
       )
       .map(e => ({
-
         desc:
           e.desc,
 
@@ -2438,23 +2653,20 @@ function finishDayPrompt() {
 
         amount:
           Number(e.amount) || 0
-
       }));
-
 
   const todayExpTotal =
     todayExpensesList.reduce(
-      (total, item) =>
-        total + item.amount,
+      (a,e) =>
+        a + e.amount,
       0
     );
 
-
   const todayAttList =
     attLog.filter(
-      l => l.date === todayDate
+      l =>
+        l.date === todayDate
     );
-
 
   daysLog.push({
 
@@ -2485,27 +2697,22 @@ function finishDayPrompt() {
 
     expensesList:
       [...todayExpensesList]
-
   });
 
-
   /*
-    بعد أرشفة اليوم:
-    نمسح فقط العمليات اليومية.
-    بيانات العضو نفسه تظل موجودة.
+    مهم جداً:
+    لا نحذف payments هنا.
+
+    كل دفعة لها تاريخ مستقل،
+    وبالتالي دفعات أمس لن تظهر في اليوم الجديد،
+    وفي نفس الوقت تظل موجودة لحساب الشهر والأرشيف.
   */
-
-  payments =
-    payments.filter(
-      p => p.date !== todayDate
-    );
-
 
   attLog =
     attLog.filter(
-      l => l.date !== todayDate
+      l =>
+        l.date !== todayDate
     );
-
 
   members.forEach(m => {
 
@@ -2515,7 +2722,6 @@ function finishDayPrompt() {
 
   });
 
-
   staff.forEach(s => {
 
     s.present = false;
@@ -2524,13 +2730,11 @@ function finishDayPrompt() {
 
   });
 
-
   save();
 
   alert(
     `✅ تم إنهاء وتصفير يوم (${todayDate}) ونقله إلى "سجل الأيام" بنجاح!`
   );
-
 
   renderDashboard();
   renderAttMembers();
@@ -2538,318 +2742,1149 @@ function finishDayPrompt() {
   renderAttLog();
   renderFinance();
   renderDaysLog();
-
+  renderYoussefSection();
 }
-
-
-/* =========================================================
-   DAYS LOG
-========================================================= */
 
 function renderDaysLog() {
 
-  const searchDate =
+  const dateSearch =
     document.getElementById(
       'days-log-date-search'
-    )?.value || '';
+    )?.value;
 
-  const list =
-    daysLog
-      .filter(
+  let filtered =
+    daysLog;
+
+  if (dateSearch) {
+
+    filtered =
+      daysLog.filter(
         d =>
-          !searchDate ||
-          d.date === searchDate
-      )
-      .slice()
-      .reverse();
-
+          d.date === dateSearch
+      );
+  }
 
   const table =
     document.getElementById(
       'days-log-table'
     );
 
-  if (!table) return;
+  if (!table) {
+    return;
+  }
 
+  if (!filtered.length) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty">
+            لا يوجد سجل أيام مطبق لهذا التاريخ
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
 
   table.innerHTML =
-    list.length
+    filtered
+      .slice()
+      .reverse()
+      .map(d => {
 
-      ? list.map(d => {
+        const realIdx =
+          daysLog.indexOf(d);
 
-          const idx =
-            daysLog.indexOf(d);
+        return `
+          <tr>
 
-          return `
-            <tr>
+            <td>
+              <b>${d.date}</b>
+            </td>
 
-              <td>
-                <b>${escapeHtml(d.date)}</b>
-              </td>
+            <td>
+              ${d.attCount || 0} شخص
+            </td>
 
-              <td>
-                ${fmt(d.attCount)}
-              </td>
+            <td
+              style="
+                color:var(--success);
+                font-weight:700
+              "
+            >
+              ${fmt(d.income)} ج.م
+            </td>
 
-              <td style="color:var(--success);font-weight:700">
-                ${fmt(d.income)} ج.م
-              </td>
+            <td
+              style="
+                color:var(--danger);
+                font-weight:700
+              "
+            >
+              ${fmt(d.expenses)} ج.م
+            </td>
 
-              <td style="color:var(--danger);font-weight:700">
-                ${fmt(d.expenses)} ج.م
-              </td>
+            <td
+              style="
+                color:var(--accent);
+                font-weight:700
+              "
+            >
+              ${fmt(d.net)} ج.م
+            </td>
 
-              <td style="font-weight:700">
-                ${fmt(d.net)} ج.م
-              </td>
+            <td>
 
-              <td>
+              <button
+                class="btn btn-sm btn-ghost"
+                onclick="viewDayDetails(${realIdx})"
+              >
+                👁️ التفاصيل والتعديل
+              </button>
 
-                <button
-                  class="btn btn-sm btn-primary"
-                  onclick="viewDayDetails(${idx})"
-                >
-                  📋 التفاصيل
-                </button>
+            </td>
 
-              </td>
+          </tr>
+        `;
 
-            </tr>
-          `;
-
-        }).join('')
-
-      : `
-        <tr>
-          <td colspan="6">
-            <div class="empty">
-              لا توجد أيام مؤرشفة
-            </div>
-          </td>
-        </tr>
-      `;
-
+      }).join('');
 }
-
-
 function viewDayDetails(idx) {
+
+  currentDetailType = 'day';
+  currentDetailIdx = idx;
 
   const d =
     daysLog[idx];
 
-  if (!d) return;
+  if (!d) {
+    return;
+  }
 
   document.getElementById(
-    'day-view-title'
+    'details-modal-title'
   ).textContent =
-    `📅 تفاصيل يوم ${d.date}`;
+    `📅 التفاصيل الشاملة واليومية: ${d.date}`;
 
+  let html = `
 
-  const incomes =
-    d.incomesList || [];
+    <div
+      style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:15px;
+        gap:10px;
+        flex-wrap:wrap
+      "
+    >
 
-  const expensesList =
-    d.expensesList || [];
+      <button
+        class="btn btn-sm btn-danger"
+        onclick="deleteCurrentDayLog(${idx})"
+      >
+        🗑️ حذف اليوم بالكامل
+      </button>
 
-  const logs =
-    d.logDetails || [];
+      <span
+        class="badge badge-purple"
+        style="font-size:13px"
+      >
+        صافي اليوم:
+        ${fmt(d.net)} ج.م
+      </span>
 
+    </div>
 
-  document.getElementById(
-    'day-view-body'
-  ).innerHTML = `
+    <div
+      class="form-grid three"
+      style="margin-bottom:15px"
+    >
 
-    <div class="stats-grid">
+      <div class="form-group">
 
-      <div class="stat-card success">
-        <div class="stat-num">
-          ${fmt(d.income)} ج.م
-        </div>
+        <label>
+          تاريخ اليوم
+        </label>
 
-        <div class="stat-lbl">
-          إجمالي الإيرادات
-        </div>
+        <input
+          type="date"
+          id="det-day-date"
+          value="${d.date}"
+        />
+
       </div>
 
-      <div class="stat-card danger">
-        <div class="stat-num">
-          ${fmt(d.expenses)} ج.م
-        </div>
+      <div class="form-group">
 
-        <div class="stat-lbl">
-          إجمالي المصروفات
-        </div>
+        <label>
+          إجمالي الإيرادات (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="det-day-inc"
+          value="${Number(d.income || 0)}"
+        />
+
       </div>
 
-      <div class="stat-card info">
-        <div class="stat-num">
-          ${fmt(d.net)} ج.م
-        </div>
+      <div class="form-group">
 
-        <div class="stat-lbl">
-          صافي اليوم
-        </div>
+        <label>
+          إجمالي المصروفات (ج.م)
+        </label>
+
+        <input
+          type="number"
+          id="det-day-exp"
+          value="${Number(d.expenses || 0)}"
+        />
+
       </div>
 
     </div>
 
+    <div
+      class="card-title"
+      style="margin-top:15px"
+    >
+      <span>
+        💵 الإيرادات والاشتراكات المحصلة لهذا اليوم
+      </span>
+    </div>
 
-    <div class="card">
+    <div class="table-wrap">
 
-      <div class="card-title">
-        💵 الإيرادات
-      </div>
+      <table>
 
-      ${
-        incomes.length
+        <thead>
 
-          ? incomes.map(x => `
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>الاشتراك</th>
+            <th>المبلغ المحصل</th>
+          </tr>
 
-              <div class="att-row">
+        </thead>
 
-                <div>
-                  <div class="att-name">
-                    ${escapeHtml(x.name)}
-                  </div>
+        <tbody>
+  `;
 
-                  <div class="att-sub">
-                    ${escapeHtml(x.sub || '')}
-                  </div>
-                </div>
+  if (
+    !d.incomesList ||
+    !d.incomesList.length
+  ) {
 
-                <b style="color:var(--success)">
-                  ${fmt(x.amount)} ج.م
-                </b>
+    html += `
+      <tr>
+        <td colspan="4">
+          <div class="empty">
+            لا توجد اشتراكات مسجلة بتاريخ هذا اليوم
+          </div>
+        </td>
+      </tr>
+    `;
 
-              </div>
+  } else {
 
-            `).join('')
+    d.incomesList.forEach(
+      (inc,i) => {
 
-          : '<div class="empty">لا توجد إيرادات</div>'
+        html += `
+          <tr>
+
+            <td>
+              ${i + 1}
+            </td>
+
+            <td>
+              <b>${inc.name}</b>
+            </td>
+
+            <td>
+              ${inc.sub}
+            </td>
+
+            <td
+              style="
+                color:var(--success);
+                font-weight:700
+              "
+            >
+              ${fmt(inc.amount)} ج.م
+            </td>
+
+          </tr>
+        `;
+
       }
+    );
+  }
+
+  html += `
+
+        </tbody>
+
+      </table>
 
     </div>
 
+    <div
+      class="card-title"
+      style="margin-top:15px"
+    >
+      <span>
+        💸 المصروفات والمستهلكات لهذا اليوم
+      </span>
+    </div>
 
-    <div class="card">
+    <div class="table-wrap">
 
-      <div class="card-title">
-        💸 المصروفات
-      </div>
+      <table>
 
-      ${
-        expensesList.length
+        <thead>
 
-          ? expensesList.map(x => `
+          <tr>
+            <th>#</th>
+            <th>الوصف والبيان</th>
+            <th>الفئة</th>
+            <th>المبلغ</th>
+          </tr>
 
-              <div class="att-row">
+        </thead>
 
-                <div>
-                  <div class="att-name">
-                    ${escapeHtml(x.desc)}
-                  </div>
+        <tbody>
+  `;
 
-                  <div class="att-sub">
-                    ${escapeHtml(x.cat || 'عام')}
-                  </div>
-                </div>
+  if (
+    !d.expensesList ||
+    !d.expensesList.length
+  ) {
 
-                <b style="color:var(--danger)">
-                  ${fmt(x.amount)} ج.م
-                </b>
+    html += `
+      <tr>
+        <td colspan="4">
+          <div class="empty">
+            لا توجد مصروفات مسجلة بهذا اليوم
+          </div>
+        </td>
+      </tr>
+    `;
 
-              </div>
+  } else {
 
-            `).join('')
+    d.expensesList.forEach(
+      (exp,i) => {
 
-          : '<div class="empty">لا توجد مصروفات</div>'
+        html += `
+          <tr>
+
+            <td>
+              ${i + 1}
+            </td>
+
+            <td>
+              <b>${exp.desc}</b>
+            </td>
+
+            <td>
+              ${exp.cat || 'عام'}
+            </td>
+
+            <td
+              style="
+                color:var(--danger);
+                font-weight:700
+              "
+            >
+              ${fmt(exp.amount)} ج.م
+            </td>
+
+          </tr>
+        `;
+
       }
+    );
+  }
+
+  html += `
+
+        </tbody>
+
+      </table>
 
     </div>
 
+    <div
+      class="card-title"
+      style="margin-top:15px"
+    >
+      <span>
+        🚪 سجل الحضور والانصراف لهذا اليوم
+        (${d.attCount || 0} شخص)
+      </span>
+    </div>
 
-    <div class="card">
+    <div class="table-wrap">
 
-      <div class="card-title">
-        🚪 سجل الحضور
-      </div>
+      <table>
 
-      ${
-        logs.length
+        <thead>
 
-          ? `
-            <div class="table-wrap">
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>النوع</th>
+            <th>وقت الدخول</th>
+            <th>وقت الخروج</th>
+          </tr>
 
-              <table>
+        </thead>
 
-                <thead>
-                  <tr>
-                    <th>الاسم</th>
-                    <th>النوع</th>
-                    <th>الدخول</th>
-                    <th>الخروج</th>
-                    <th>المدة</th>
-                  </tr>
-                </thead>
+        <tbody>
+  `;
 
-                <tbody>
+  if (
+    !d.logDetails ||
+    !d.logDetails.length
+  ) {
 
-                  ${logs.map(x => `
+    html += `
+      <tr>
+        <td colspan="5">
+          <div class="empty">
+            لا يوجد سجل حضور مسجل لهذا اليوم
+          </div>
+        </td>
+      </tr>
+    `;
 
-                    <tr>
+  } else {
 
-                      <td>
-                        ${escapeHtml(x.name)}
-                      </td>
+    d.logDetails.forEach(
+      (att,i) => {
 
-                      <td>
-                        ${escapeHtml(x.type)}
-                      </td>
+        html += `
+          <tr>
 
-                      <td>
-                        ${x.checkIn || '—'}
-                      </td>
+            <td>
+              ${i + 1}
+            </td>
 
-                      <td>
-                        ${x.checkOut || '—'}
-                      </td>
+            <td>
+              <b>${att.name}</b>
+            </td>
 
-                      <td>
-                        ${calcDuration(
-                          x.checkIn,
-                          x.checkOut
-                        )}
-                      </td>
+            <td>
 
-                    </tr>
+              <span
+                class="badge ${
+                  att.type === 'عضو'
+                    ? 'badge-info'
+                    : 'badge-purple'
+                }"
+              >
+                ${att.type}
+              </span>
 
-                  `).join('')}
+            </td>
 
-                </tbody>
+            <td>
+              ${att.checkIn || '—'}
+            </td>
 
-              </table>
+            <td>
+              ${att.checkOut || '—'}
+            </td>
 
-            </div>
-          `
+          </tr>
+        `;
 
-          : '<div class="empty">لا يوجد سجل حضور</div>'
       }
+    );
+  }
+
+  html += `
+
+        </tbody>
+
+      </table>
 
     </div>
+
+    <div class="form-divider"></div>
+
+    <button
+      class="btn btn-primary"
+      style="width:100%"
+      onclick="saveDayDetailsChanges(${idx})"
+    >
+      💾 حفظ التعديلات على اليوم
+    </button>
 
   `;
 
+  document.getElementById(
+    'details-modal-body'
+  ).innerHTML = html;
 
-  document
-    .getElementById('modal-day-view')
-    .classList.add('open');
-
+  document.getElementById(
+    'modal-details'
+  ).classList.add('open');
 }
 
+function saveDayDetailsChanges(idx) {
 
-/* =========================================================
-   FINANCE
-========================================================= */
+  const d =
+    daysLog[idx];
+
+  if (!d) {
+    return;
+  }
+
+  d.date =
+    document.getElementById(
+      'det-day-date'
+    ).value;
+
+  d.income =
+    +document.getElementById(
+      'det-day-inc'
+    ).value || 0;
+
+  d.expenses =
+    +document.getElementById(
+      'det-day-exp'
+    ).value || 0;
+
+  d.net =
+    d.income -
+    d.expenses;
+
+  save();
+
+  closeModal(
+    'modal-details'
+  );
+
+  renderDaysLog();
+
+  alert(
+    '✅ تم حفظ التعديلات على اليوم بنجاح!'
+  );
+}
+
+function deleteCurrentDayLog(idx) {
+
+  if (
+    confirm(
+      'هل أنت تأكد من حذف هذا اليوم بالكامل من الأرشيف؟'
+    )
+  ) {
+
+    const deleted =
+      daysLog.splice(
+        idx,
+        1
+      )[0];
+
+    if (!deleted) {
+      return;
+    }
+
+    trashBin.push({
+      type:'سجل يوم',
+      item:deleted,
+      deletedAt:today()
+    });
+
+    save();
+
+    closeModal(
+      'modal-details'
+    );
+
+    renderDaysLog();
+    renderTrashBin();
+  }
+}
+
+// =====================================================
+// STAFF & SALARIES
+// =====================================================
+
+function renderStaff() {
+
+  const q =
+    document.getElementById(
+      'staff-search'
+    )?.value || '';
+
+  const list =
+    staff.filter(s => {
+
+      const name =
+        String(s.name || '');
+
+      return (
+        !q ||
+        name.includes(q)
+      );
+    });
+
+  const table =
+    document.getElementById(
+      'staff-table'
+    );
+
+  if (!table) {
+    return;
+  }
+
+  if (!list.length) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="empty">
+            لا يوجد موظفون
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  table.innerHTML =
+    list.map((s,i) => {
+
+      const realIdx =
+        staff.indexOf(s);
+
+      return `
+        <tr>
+
+          <td>
+            ${i + 1}
+          </td>
+
+          <td>
+            <b>${s.name}</b>
+          </td>
+
+          <td>
+            <span class="badge badge-purple">
+              ${s.role || '—'}
+            </span>
+          </td>
+
+          <td>
+            ${s.phone || '—'}
+          </td>
+
+          <td
+            style="
+              font-weight:700;
+              color:var(--accent)
+            "
+          >
+            ${fmt(s.salary)} ج.م
+          </td>
+
+          <td>
+            ${s.hire || '—'}
+          </td>
+
+          <td>
+
+            <span
+              class="badge ${
+                s.present
+                  ? 'badge-success'
+                  : 'badge-gray'
+              }"
+            >
+              ${
+                s.present
+                  ? 'داخل'
+                  : 'خارج'
+              }
+            </span>
+
+          </td>
+
+          <td>
+
+            <button
+              class="btn btn-sm btn-ghost"
+              onclick="editStaff(${realIdx})"
+            >
+              ✏️
+            </button>
+
+            <button
+              class="btn btn-sm btn-ghost"
+              style="color:var(--danger)"
+              onclick="deleteStaffProtected(${realIdx})"
+            >
+              🗑️
+            </button>
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join('');
+}
+
+function openAddStaff() {
+
+  editStaffIdx = -1;
+
+  [
+    's-name',
+    's-phone',
+    's-salary'
+  ].forEach(id => {
+
+    const el =
+      document.getElementById(id);
+
+    if (el) {
+      el.value = '';
+    }
+
+  });
+
+  document.getElementById(
+    's-role'
+  ).value =
+    'كابتن';
+
+  document.getElementById(
+    's-status'
+  ).value =
+    'نشط';
+
+  document.getElementById(
+    's-hire'
+  ).value =
+    today();
+
+  document.getElementById(
+    'modal-staff'
+  ).classList.add('open');
+}
+
+function editStaff(idx) {
+
+  editStaffIdx = idx;
+
+  const s =
+    staff[idx];
+
+  if (!s) {
+    return;
+  }
+
+  document.getElementById(
+    's-name'
+  ).value =
+    s.name || '';
+
+  document.getElementById(
+    's-phone'
+  ).value =
+    s.phone || '';
+
+  document.getElementById(
+    's-role'
+  ).value =
+    s.role || 'كابتن';
+
+  document.getElementById(
+    's-salary'
+  ).value =
+    s.salary || 0;
+
+  document.getElementById(
+    's-hire'
+  ).value =
+    s.hire || today();
+
+  document.getElementById(
+    's-status'
+  ).value =
+    s.status || 'نشط';
+
+  document.getElementById(
+    'modal-staff'
+  ).classList.add('open');
+}
+
+function saveStaff() {
+
+  const name =
+    document.getElementById(
+      's-name'
+    ).value.trim();
+
+  const phone =
+    document.getElementById(
+      's-phone'
+    ).value.trim();
+
+  if (!name) {
+    alert(
+      '❌ أدخل اسم الموظف'
+    );
+    return;
+  }
+
+  if (
+    phone &&
+    phone.length < 11
+  ) {
+    alert(
+      "❌ رقم الهاتف يجب ألا يقل عن 11 رقم!"
+    );
+    return;
+  }
+
+  const obj = {
+
+    name,
+
+    role:
+      document.getElementById(
+        's-role'
+      ).value,
+
+    phone,
+
+    salary:
+      +document.getElementById(
+        's-salary'
+      ).value || 0,
+
+    hire:
+      document.getElementById(
+        's-hire'
+      ).value,
+
+    status:
+      document.getElementById(
+        's-status'
+      ).value
+
+  };
+
+  if (editStaffIdx >= 0) {
+
+    Object.assign(
+      staff[editStaffIdx],
+      obj
+    );
+
+  } else {
+
+    staff.push({
+
+      id:
+        Date.now(),
+
+      ...obj,
+
+      present:false,
+
+      checkIn:null,
+
+      checkOut:null,
+
+      deductions:0,
+
+      salaryPaid:false
+
+    });
+  }
+
+  save();
+
+  closeModal(
+    'modal-staff'
+  );
+
+  renderStaff();
+  renderAttStaff();
+  renderYoussefSection();
+}
+
+function deleteStaffProtected(idx) {
+
+  const p =
+    prompt(
+      'أدخل الباسورد الحذف:'
+    );
+
+  if (
+    p === ADMIN.pass ||
+    p === ADMIN.youssefPass
+  ) {
+
+    const deleted =
+      staff.splice(
+        idx,
+        1
+      )[0];
+
+    if (!deleted) {
+      return;
+    }
+
+    trashBin.push({
+      type:'موظف',
+      item:deleted,
+      deletedAt:today()
+    });
+
+    save();
+
+    renderStaff();
+    renderAttStaff();
+    renderTrashBin();
+    renderYoussefSection();
+
+  } else if (
+    p !== null
+  ) {
+
+    alert(
+      '❌ كلمة المرور غير صحيحة!'
+    );
+  }
+}
+
+function renderSalary() {
+
+  const summary =
+    document.getElementById(
+      'salary-summary'
+    );
+
+  const table =
+    document.getElementById(
+      'salary-table'
+    );
+
+  if (!table) {
+    return;
+  }
+
+  const total =
+    staff.reduce(
+      (a,s) =>
+        a +
+        Number(s.salary || 0) -
+        Number(s.deductions || 0),
+      0
+    );
+
+  const paid =
+    staff
+      .filter(
+        s => s.salaryPaid
+      )
+      .reduce(
+        (a,s) =>
+          a +
+          Number(s.salary || 0) -
+          Number(s.deductions || 0),
+        0
+      );
+
+  if (summary) {
+
+    summary.innerHTML = `
+
+      <div class="salary-box">
+
+        <div class="salary-num">
+          ${fmt(total)} ج.م
+        </div>
+
+        <div class="salary-lbl">
+          إجمالي الرواتب الصافية
+        </div>
+
+      </div>
+
+      <div class="salary-box">
+
+        <div
+          class="salary-num"
+          style="color:var(--success)"
+        >
+          ${fmt(paid)} ج.م
+        </div>
+
+        <div class="salary-lbl">
+          تم الصرف
+        </div>
+
+      </div>
+
+      <div class="salary-box">
+
+        <div
+          class="salary-num"
+          style="color:var(--danger)"
+        >
+          ${fmt(total - paid)} ج.م
+        </div>
+
+        <div class="salary-lbl">
+          متبقي
+        </div>
+
+      </div>
+    `;
+  }
+
+  if (!staff.length) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="empty">
+            لا يوجد موظفون
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  table.innerHTML =
+    staff.map((s,i) => {
+
+      const salary =
+        Number(s.salary || 0);
+
+      const deductions =
+        Number(s.deductions || 0);
+
+      const net =
+        salary - deductions;
+
+      return `
+        <tr>
+
+          <td>
+            <b>${s.name}</b>
+          </td>
+
+          <td>
+            ${s.role || '—'}
+          </td>
+
+          <td>
+            ${fmt(salary)} ج.م
+          </td>
+
+          <td>
+
+            <input
+              class="inline-input"
+              type="number"
+              value="${deductions}"
+              placeholder="خصم/سلفة"
+              onchange="
+                staff[${i}].deductions=+this.value || 0;
+                save();
+                renderSalary();
+                renderYoussefSection();
+              "
+            />
+
+          </td>
+
+          <td
+            style="
+              font-weight:700;
+              color:var(--accent)
+            "
+          >
+            ${fmt(net)} ج.م
+          </td>
+
+          <td>
+
+            <span
+              class="badge ${
+                s.salaryPaid
+                  ? 'badge-success'
+                  : 'badge-warn'
+              }"
+            >
+              ${
+                s.salaryPaid
+                  ? '✅ تم الصرف'
+                  : '⏳ لم يتم'
+              }
+            </span>
+
+          </td>
+
+          <td>
+
+            <button
+              class="btn btn-sm ${
+                s.salaryPaid
+                  ? 'btn-ghost'
+                  : 'btn-success'
+              }"
+              onclick="toggleSalary(${i})"
+            >
+              ${
+                s.salaryPaid
+                  ? '↩️ إلغاء'
+                  : '💸 صرف'
+              }
+            </button>
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join('');
+}
+
+function toggleSalary(i) {
+
+  if (!staff[i]) {
+    return;
+  }
+
+  staff[i].salaryPaid =
+    !staff[i].salaryPaid;
+
+  save();
+
+  renderSalary();
+  renderYoussefSection();
+}
+
+// =====================================================
+// FINANCE
+// =====================================================
 
 function renderFinance() {
 
@@ -2858,19 +3893,21 @@ function renderFinance() {
 
   const todayPaymentsList =
     payments.filter(
-      p => p.date === todayDate
+      p =>
+        p.date === todayDate
     );
 
   const todayIncome =
     todayPaymentsList.reduce(
-      (a, p) =>
-        a + Number(p.amount || 0),
+      (a,p) =>
+        a +
+        Number(p.amount || 0),
       0
     );
 
   const totalDebt =
     members.reduce(
-      (a, m) =>
+      (a,m) =>
         a +
         Math.max(
           0,
@@ -2882,252 +3919,282 @@ function renderFinance() {
 
   const todayExpensesList =
     expenses.filter(
-      e => e.date === todayDate
+      e =>
+        e.date === todayDate
     );
 
   const totalExp =
     todayExpensesList.reduce(
-      (a, e) =>
-        a + Number(e.amount || 0),
+      (a,e) =>
+        a +
+        Number(e.amount || 0),
       0
     );
 
   const net =
-    todayIncome - totalExp;
+    todayIncome -
+    totalExp;
 
+  const stats =
+    document.getElementById(
+      'finance-stats'
+    );
 
-  document.getElementById(
-    'finance-stats'
-  ).innerHTML = `
+  if (stats) {
 
-    <div class="stat-card success">
-      <div class="stat-num">
-        ${fmt(todayIncome)} ج.م
+    stats.innerHTML = `
+
+      <div class="stat-card success">
+
+        <div class="stat-num">
+          ${fmt(todayIncome)} ج.م
+        </div>
+
+        <div class="stat-lbl">
+          إيرادات مدفوعات اليوم
+        </div>
+
       </div>
 
-      <div class="stat-lbl">
-        إيرادات مدفوعات اليوم
-      </div>
-    </div>
+      <div class="stat-card danger">
 
-    <div class="stat-card danger">
-      <div class="stat-num">
-        ${fmt(totalExp)} ج.م
-      </div>
+        <div class="stat-num">
+          ${fmt(totalExp)} ج.م
+        </div>
 
-      <div class="stat-lbl">
-        مصروفات اليوم
-      </div>
-    </div>
+        <div class="stat-lbl">
+          مصروفات اليوم
+        </div>
 
-    <div class="stat-card ${net >= 0 ? 'success' : 'danger'}">
-      <div class="stat-num">
-        ${fmt(net)} ج.م
       </div>
 
-      <div class="stat-lbl">
-        الصافي اليومي
+      <div
+        class="stat-card ${
+          net >= 0
+            ? 'success'
+            : 'danger'
+        }"
+      >
+
+        <div class="stat-num">
+          ${fmt(net)} ج.م
+        </div>
+
+        <div class="stat-lbl">
+          الصافي اليومي التجاري
+        </div>
+
       </div>
-    </div>
 
-    <div class="stat-card warn">
-      <div class="stat-num">
-        ${fmt(totalDebt)} ج.م
+      <div class="stat-card warn">
+
+        <div class="stat-num">
+          ${fmt(totalDebt)} ج.م
+        </div>
+
+        <div class="stat-lbl">
+          ديون ومستحقات
+        </div>
+
       </div>
+    `;
+  }
 
-      <div class="stat-lbl">
-        ديون ومستحقات
-      </div>
-    </div>
+  const incomeEl =
+    document.getElementById(
+      'finance-income'
+    );
 
-  `;
+  if (incomeEl) {
 
+    incomeEl.innerHTML =
+      todayPaymentsList.length
 
-  document.getElementById(
-    'finance-income'
-  ).innerHTML =
+      ? todayPaymentsList.map(
+          p => `
 
-    todayPaymentsList.length
-
-      ? todayPaymentsList.map(p => `
-
-          <div class="att-row">
-
-            <div>
-              <div class="att-name">
-                ${escapeHtml(p.memberName)}
-              </div>
-
-              <div class="att-sub">
-                ${escapeHtml(p.sub || '')}
-              </div>
-            </div>
-
-            <span style="color:var(--success);font-weight:700">
-              ${fmt(p.amount)} ج.م
-            </span>
-
-          </div>
-
-        `).join('')
-
-      : '<div class="empty">لا توجد إيرادات مسجلة اليوم</div>';
-
-
-  document.getElementById(
-    'finance-expense'
-  ).innerHTML =
-
-    todayExpensesList.length
-
-      ? todayExpensesList.map(e => `
-
-          <div class="att-row">
-
-            <div>
+            <div class="att-row">
 
               <div class="att-name">
-                ${escapeHtml(e.desc)}
+                ${p.memberName}
+                (${p.sub})
               </div>
 
-              <div class="att-sub">
-                ${escapeHtml(e.cat || 'عام')}
-              </div>
+              <span
+                style="
+                  color:var(--success);
+                  font-weight:700
+                "
+              >
+                ${fmt(p.amount)} ج.م
+              </span>
 
             </div>
 
-            <span style="color:var(--danger);font-weight:700">
-              ${fmt(e.amount)} ج.م
-            </span>
+          `
+        ).join('')
 
-          </div>
+      : `
+        <div class="empty">
+          لا توجد إيرادات مسجلة اليوم
+        </div>
+      `;
+  }
 
-        `).join('')
+  const expenseEl =
+    document.getElementById(
+      'finance-expense'
+    );
 
-      : '<div class="empty">لا توجد مصروفات مسجلة اليوم</div>';
+  if (expenseEl) {
 
+    expenseEl.innerHTML =
+      todayExpensesList.length
+
+      ? todayExpensesList.map(
+          e => `
+
+            <div class="att-row">
+
+              <div>
+
+                <div class="att-name">
+                  ${e.desc}
+                  (${e.cat || 'عام'})
+                </div>
+
+                <div class="att-sub">
+                  ${e.date}
+                </div>
+
+              </div>
+
+              <span
+                style="
+                  color:var(--danger);
+                  font-weight:700
+                "
+              >
+                ${fmt(e.amount)} ج.م
+              </span>
+
+            </div>
+
+          `
+        ).join('')
+
+      : `
+        <div class="empty">
+          لا توجد مصروفات مسجلة اليوم
+        </div>
+      `;
+  }
 
   const debtQuery =
     (
       document.getElementById(
         'debt-search'
       )?.value || ''
-    ).trim().toLowerCase();
-
+    ).trim();
 
   const debtMembers =
     members.filter(m => {
 
-      const remaining =
-        Number(m.price || 0) -
-        Number(m.paid || 0);
+      const name =
+        String(m.name || '');
 
-      if (remaining <= 0) {
-        return false;
-      }
-
-      if (!debtQuery) {
-        return true;
-      }
+      const phone =
+        String(m.phone || '');
 
       return (
-        String(m.name || '')
-          .toLowerCase()
-          .includes(debtQuery) ||
-
-        String(m.phone || '')
-          .includes(debtQuery)
+        Number(m.paid || 0) <
+        Number(m.price || 0)
+        &&
+        (
+          !debtQuery ||
+          name.includes(debtQuery) ||
+          phone.includes(debtQuery)
+        )
       );
-
     });
-
 
   const debtTable =
     document.getElementById(
       'debt-table'
     );
 
-  if (!debtTable) return;
+  if (!debtTable) {
+    return;
+  }
 
+  if (!debtMembers.length) {
 
-  debtTable.innerHTML =
-    debtMembers.length
+    debtTable.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty">
+            لا توجد ديون مطابقة للبحث
+          </div>
+        </td>
+      </tr>
+    `;
 
-      ? debtMembers.map(m => {
+  } else {
 
-          const idx =
-            members.indexOf(m);
-
-          const remaining =
-            Math.max(
-              0,
-              Number(m.price || 0) -
-              Number(m.paid || 0)
-            );
-
-          return `
-
-            <tr>
-
-              <td>
-                <b>${escapeHtml(m.name)}</b>
-              </td>
-
-              <td>
-                ${escapeHtml(m.phone || '—')}
-              </td>
-
-              <td>
-                ${fmt(m.price)} ج.م
-              </td>
-
-              <td>
-                ${fmt(m.paid)} ج.م
-              </td>
-
-              <td style="color:var(--danger);font-weight:700">
-                ${fmt(remaining)} ج.م
-              </td>
-
-              <td>
-
-                <button
-                  class="btn btn-sm btn-success"
-                  onclick="openPay(${idx})"
-                >
-                  💳 تحصيل
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join('')
-
-      : `
+    debtTable.innerHTML =
+      debtMembers.map(m => `
 
         <tr>
 
-          <td colspan="6">
+          <td>
+            <b>${m.name}</b>
+          </td>
 
-            <div class="empty">
-              لا توجد ديون مطابقة للبحث
-            </div>
+          <td>
+            ${m.phone || '—'}
+          </td>
+
+          <td>
+            ${fmt(m.price)} ج.م
+          </td>
+
+          <td
+            style="color:var(--success)"
+          >
+            ${fmt(m.paid)} ج.م
+          </td>
+
+          <td
+            style="
+              color:var(--danger);
+              font-weight:700
+            "
+          >
+            ${
+              fmt(
+                Number(m.price || 0) -
+                Number(m.paid || 0)
+              )
+            }
+            ج.م
+          </td>
+
+          <td>
+
+            <button
+              class="btn btn-sm btn-primary"
+              onclick="openPay(${members.indexOf(m)})"
+            >
+              💳 تحصيل
+            </button>
 
           </td>
 
         </tr>
 
-      `;
-
+      `).join('');
+  }
 }
-
-
-/* =========================================================
-   EXPENSES
-========================================================= */
 
 function openAddExpense() {
 
@@ -3141,21 +4208,13 @@ function openAddExpense() {
 
   document.getElementById(
     'exp-date'
-  ).value = today();
+  ).value =
+    today();
 
   document.getElementById(
     'modal-expense'
   ).classList.add('open');
-
 }
-
-
-function openAddYoussefExpense() {
-
-  openAddExpense();
-
-}
-
 
 function saveExpense() {
 
@@ -3164,123 +4223,77 @@ function saveExpense() {
       'exp-desc'
     ).value.trim();
 
+  const amt =
+    +document.getElementById(
+      'exp-amount'
+    ).value || 0;
+
   const cat =
     document.getElementById(
       'exp-cat'
     ).value;
 
-  const amount =
-    Number(
-      document.getElementById(
-        'exp-amount'
-      ).value
-    ) || 0;
+  if (
+    !desc ||
+    !amt
+  ) {
+
+    alert(
+      'برجاء إدخال وصف ومبلغ المصروف بشكل صحيح'
+    );
+
+    return;
+  }
 
   const date =
     document.getElementById(
       'exp-date'
-    ).value || today();
-
-
-  if (!desc) {
-
-    alert('❌ اكتب وصف المصروف');
-
-    return;
-
-  }
-
-  if (amount <= 0) {
-
-    alert('❌ أدخل مبلغ صحيح');
-
-    return;
-
-  }
-
+    ).value ||
+    today();
 
   expenses.push({
 
     id:
-      Date.now() +
-      Math.random(),
+      Date.now(),
 
     desc,
+
     cat,
-    amount,
+
+    amount:
+      amt,
+
     date
-
   });
-
 
   save();
 
-  closeModal('modal-expense');
-
-  renderFinance();
-  renderYoussefSection();
-
-}
-
-
-function deleteExpense(idx) {
-
-  const e =
-    expenses[idx];
-
-  if (!e) return;
-
-  if (
-    !confirm(
-      `هل تريد حذف المصروف "${e.desc}"؟`
-    )
-  ) {
-    return;
-  }
-
-
-  trashBin.push({
-
-    id:
-      Date.now() +
-      Math.random(),
-
-    type:
-      'مصروف',
-
-    data:
-      JSON.parse(
-        JSON.stringify(e)
-      ),
-
-    title:
-      e.desc,
-
-    deletedAt:
-      today()
-
-  });
-
-
-  expenses.splice(
-    idx,
-    1
+  closeModal(
+    'modal-expense'
   );
 
-
-  save();
-
   renderFinance();
   renderYoussefSection();
-
 }
 
-
-/* =========================================================
-   YOUSSEF SECTION
-========================================================= */
+// =====================================================
+// CAPTAIN YOUSSEF
+// =====================================================
 
 function switchYoussefTab(tab, btn) {
+
+  document
+    .querySelectorAll(
+      '#page-youssef .tab-btn'
+    )
+    .forEach(
+      b =>
+        b.classList.remove('active')
+    );
+
+  if (btn) {
+    btn.classList.add('active');
+  }
 
   document.getElementById(
     'youssef-current-sec'
@@ -3317,21 +4330,6 @@ function switchYoussefTab(tab, btn) {
       ? 'block'
       : 'none';
 
-
-  document
-    .querySelectorAll(
-      '#page-youssef .tab-btn'
-    )
-    .forEach(
-      b => b.classList.remove('active')
-    );
-
-
-  if (btn) {
-    btn.classList.add('active');
-  }
-
-
   if (tab === 'staff-sec') {
     renderStaff();
   }
@@ -3347,32 +4345,30 @@ function switchYoussefTab(tab, btn) {
   if (tab === 'trash-sec') {
     renderTrashBin();
   }
-
 }
-
 
 function renderYoussefSection() {
 
   const autoIncome =
     payments.reduce(
-      (a, p) =>
-        a + Number(p.amount || 0),
+      (a,p) =>
+        a +
+        Number(p.amount || 0),
       0
     );
 
   const totalIncome =
     manualFixedIncome !== null
-      ? Number(manualFixedIncome)
+      ? Number(manualFixedIncome || 0)
       : autoIncome;
-
 
   const totalExp =
     expenses.reduce(
-      (a, e) =>
-        a + Number(e.amount || 0),
+      (a,e) =>
+        a +
+        Number(e.amount || 0),
       0
     );
-
 
   const paidSalaries =
     staff
@@ -3380,22 +4376,20 @@ function renderYoussefSection() {
         s => s.salaryPaid
       )
       .reduce(
-        (a, s) =>
+        (a,s) =>
           a +
           Number(s.salary || 0) -
           Number(s.deductions || 0),
         0
       );
 
-
   const grandTotalExp =
-    totalExp + paidSalaries;
-
+    totalExp +
+    paidSalaries;
 
   const remainingIncome =
     totalIncome -
     grandTotalExp;
-
 
   const incomeEl =
     document.getElementById(
@@ -3412,7 +4406,6 @@ function renderYoussefSection() {
       'yous-rem-income'
     );
 
-
   if (incomeEl) {
     incomeEl.textContent =
       `${fmt(totalIncome)} ج.م`;
@@ -3428,20 +4421,21 @@ function renderYoussefSection() {
       `${fmt(remainingIncome)} ج.م`;
   }
 
-
   const table =
     document.getElementById(
       'youssef-expenses-table'
     );
 
-  if (!table) return;
-
+  if (!table) {
+    return;
+  }
 
   let rows = '';
 
-
   staff
-    .filter(s => s.salaryPaid)
+    .filter(
+      s => s.salaryPaid
+    )
     .forEach(s => {
 
       const net =
@@ -3452,11 +4446,13 @@ function renderYoussefSection() {
 
         <tr>
 
-          <td>#</td>
+          <td>
+            #
+          </td>
 
           <td>
             مرتب الكابتن/الموظف:
-            <b>${escapeHtml(s.name)}</b>
+            <b>${s.name}</b>
           </td>
 
           <td>
@@ -3465,7 +4461,12 @@ function renderYoussefSection() {
             </span>
           </td>
 
-          <td style="color:var(--danger);font-weight:700">
+          <td
+            style="
+              color:var(--danger);
+              font-weight:700
+            "
+          >
             ${fmt(net)} ج.م
           </td>
 
@@ -3480,684 +4481,190 @@ function renderYoussefSection() {
           </td>
 
         </tr>
-
       `;
-
     });
 
+  expenses.forEach(
+    (e,i) => {
 
-  expenses.forEach((e, i) => {
+      rows += `
 
-    rows += `
+        <tr>
 
-      <tr>
+          <td>
+            ${i + 1}
+          </td>
 
-        <td>
-          ${i + 1}
-        </td>
+          <td>
+            <b>${e.desc}</b>
+          </td>
 
-        <td>
-          <b>
-            ${escapeHtml(e.desc)}
-          </b>
-        </td>
+          <td>
+            <span class="badge badge-warn">
+              ${e.cat || 'مستهلكات'}
+            </span>
+          </td>
 
-        <td>
-          <span class="badge badge-warn">
-            ${escapeHtml(
-              e.cat || 'مستهلكات'
-            )}
-          </span>
-        </td>
-
-        <td style="color:var(--danger);font-weight:700">
-          ${fmt(e.amount)} ج.م
-        </td>
-
-        <td>
-          ${escapeHtml(e.date)}
-        </td>
-
-        <td>
-
-          <button
-            class="btn btn-sm btn-ghost"
-            style="color:var(--danger)"
-            onclick="deleteExpense(${i})"
+          <td
+            style="
+              color:var(--danger);
+              font-weight:700
+            "
           >
-            🗑️ حذف
-          </button>
+            ${fmt(e.amount)} ج.م
+          </td>
 
-        </td>
+          <td>
+            ${e.date}
+          </td>
 
-      </tr>
+          <td>
 
-    `;
+            <button
+              class="btn btn-sm btn-ghost"
+              style="color:var(--danger)"
+              onclick="deleteExpense(${i})"
+            >
+              🗑️ حذف
+            </button>
 
-  });
+          </td>
 
+        </tr>
+      `;
+    }
+  );
 
-  table.innerHTML =
-    rows ||
-    `
+  if (!rows) {
+
+    rows = `
       <tr>
         <td colspan="6">
           <div class="empty">
-            لا توجد مصروفات أو رواتب مسجلة
+            لا توجد مصاريف أو مستهلكات مسجلة لهذا الشهر حتى الآن
           </div>
         </td>
       </tr>
     `;
-
-}
-
-
-function setFixedMonthlyIncome() {
-
-  const current =
-    manualFixedIncome !== null
-      ? manualFixedIncome
-      : payments.reduce(
-          (a, p) =>
-            a + Number(p.amount || 0),
-          0
-        );
-
-
-  const value =
-    prompt(
-      'أدخل إجمالي دخل الشهر:',
-      current
-    );
-
-  if (value === null) {
-    return;
   }
-
-  const amount =
-    Number(value);
-
-  if (
-    !Number.isFinite(amount) ||
-    amount < 0
-  ) {
-
-    alert('❌ أدخل مبلغ صحيح');
-
-    return;
-
-  }
-
-  manualFixedIncome =
-    amount;
-
-  save();
-
-  renderYoussefSection();
-
-}
-
-
-/* =========================================================
-   STAFF
-========================================================= */
-
-function openAddStaff() {
-
-  editStaffIdx = -1;
-
-  document.getElementById(
-    's-name'
-  ).value = '';
-
-  document.getElementById(
-    's-phone'
-  ).value = '';
-
-  document.getElementById(
-    's-salary'
-  ).value = 0;
-
-  document.getElementById(
-    's-hire'
-  ).value = today();
-
-  document.getElementById(
-    's-status'
-  ).value = 'نشط';
-
-  document.getElementById(
-    'modal-staff'
-  ).classList.add('open');
-
-}
-
-
-function renderStaff() {
-
-  const q =
-    (
-      document.getElementById(
-        'staff-search'
-      )?.value || ''
-    ).trim().toLowerCase();
-
-
-  const list =
-    staff.filter(s => {
-
-      if (!q) return true;
-
-      return (
-        String(s.name || '')
-          .toLowerCase()
-          .includes(q) ||
-
-        String(s.phone || '')
-          .includes(q)
-      );
-
-    });
-
-
-  const table =
-    document.getElementById(
-      'staff-table'
-    );
-
-  if (!table) return;
-
 
   table.innerHTML =
-    list.length
-
-      ? list.map(s => {
-
-          const idx =
-            staff.indexOf(s);
-
-          return `
-
-            <tr>
-
-              <td>${idx + 1}</td>
-
-              <td>
-                <b>${escapeHtml(s.name)}</b>
-              </td>
-
-              <td>
-                ${escapeHtml(s.role || '—')}
-              </td>
-
-              <td>
-                ${escapeHtml(s.phone || '—')}
-              </td>
-
-              <td>
-                ${fmt(s.salary)} ج.م
-              </td>
-
-              <td>
-                ${escapeHtml(s.hire || '—')}
-              </td>
-
-              <td>
-                <span class="badge badge-success">
-                  ${escapeHtml(s.status || 'نشط')}
-                </span>
-              </td>
-
-              <td>
-
-                <div style="display:flex;gap:5px">
-
-                  <button
-                    class="btn btn-sm btn-ghost"
-                    onclick="editStaff(${idx})"
-                  >
-                    ✏️
-                  </button>
-
-                  <button
-                    class="btn btn-sm btn-danger"
-                    onclick="deleteStaff(${idx})"
-                  >
-                    🗑️
-                  </button>
-
-                </div>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join('')
-
-      : `
-        <tr>
-          <td colspan="8">
-            <div class="empty">
-              لا يوجد موظفون
-            </div>
-          </td>
-        </tr>
-      `;
-
+    rows;
 }
 
-
-function saveStaff() {
-
-  const name =
-    document.getElementById(
-      's-name'
-    ).value.trim();
-
-  if (!name) {
-
-    alert('❌ اكتب اسم الموظف');
-
-    return;
-
-  }
-
-
-  const data = {
-
-    id:
-      editStaffIdx >= 0
-        ? staff[editStaffIdx].id
-        : Date.now() + Math.random(),
-
-    name,
-
-    role:
-      document.getElementById(
-        's-role'
-      ).value,
-
-    phone:
-      document.getElementById(
-        's-phone'
-      ).value.trim(),
-
-    salary:
-      Number(
-        document.getElementById(
-          's-salary'
-        ).value
-      ) || 0,
-
-    hire:
-      document.getElementById(
-        's-hire'
-      ).value || today(),
-
-    status:
-      document.getElementById(
-        's-status'
-      ).value,
-
-    present:
-      editStaffIdx >= 0
-        ? staff[editStaffIdx].present || false
-        : false,
-
-    checkIn:
-      editStaffIdx >= 0
-        ? staff[editStaffIdx].checkIn || null
-        : null,
-
-    checkOut:
-      editStaffIdx >= 0
-        ? staff[editStaffIdx].checkOut || null
-        : null,
-
-    salaryPaid:
-      editStaffIdx >= 0
-        ? staff[editStaffIdx].salaryPaid || false
-        : false,
-
-    deductions:
-      editStaffIdx >= 0
-        ? staff[editStaffIdx].deductions || 0
-        : 0
-
-  };
-
-
-  if (editStaffIdx >= 0) {
-
-    staff[editStaffIdx] =
-      data;
-
-  } else {
-
-    staff.push(data);
-
-  }
-
-
-  save();
-
-  closeModal('modal-staff');
-
-  renderStaff();
-  renderSalary();
-  renderAttStaff();
-
+function openAddYoussefExpense() {
+  openAddExpense();
 }
 
-
-function editStaff(idx) {
-
-  const s =
-    staff[idx];
-
-  if (!s) return;
-
-  editStaffIdx = idx;
-
-  document.getElementById(
-    's-name'
-  ).value = s.name || '';
-
-  document.getElementById(
-    's-role'
-  ).value = s.role || 'كابتن';
-
-  document.getElementById(
-    's-phone'
-  ).value = s.phone || '';
-
-  document.getElementById(
-    's-salary'
-  ).value = s.salary || 0;
-
-  document.getElementById(
-    's-hire'
-  ).value = s.hire || today();
-
-  document.getElementById(
-    's-status'
-  ).value = s.status || 'نشط';
-
-  document.getElementById(
-    'modal-staff'
-  ).classList.add('open');
-
-}
-
-
-function deleteStaff(idx) {
-
-  const s =
-    staff[idx];
-
-  if (!s) return;
+function deleteExpense(idx) {
 
   if (
     !confirm(
-      `هل تريد حذف الموظف "${s.name}"؟`
+      'هل أنت تأكد من حذف هذا المصروف ونقله لسلة المهملات؟'
     )
   ) {
     return;
   }
 
+  const deleted =
+    expenses.splice(
+      idx,
+      1
+    )[0];
+
+  if (!deleted) {
+    return;
+  }
 
   trashBin.push({
 
-    id:
-      Date.now() +
-      Math.random(),
-
     type:
-      'موظف',
+      'مصروف',
 
-    data:
-      JSON.parse(
-        JSON.stringify(s)
-      ),
-
-    title:
-      s.name,
+    item:
+      deleted,
 
     deletedAt:
       today()
-
   });
-
-
-  staff.splice(
-    idx,
-    1
-  );
 
   save();
 
-  renderStaff();
-  renderSalary();
-  renderAttStaff();
-
+  renderYoussefSection();
+  renderFinance();
+  renderTrashBin();
 }
 
+function setFixedMonthlyIncome() {
 
-/* =========================================================
-   SALARY
-========================================================= */
-
-function renderSalary() {
-
-  const summary =
-    document.getElementById(
-      'salary-summary'
+  const input =
+    prompt(
+      'أدخل إجمالي الدخل الثابت للشهر الحالي (أو اتركه فارغاً للاعتماد على إجمالي اشتراكات الأعضاء تلقائياً):',
+      manualFixedIncome !== null
+        ? manualFixedIncome
+        : ''
     );
 
-  const table =
-    document.getElementById(
-      'salary-table'
-    );
-
-  if (!summary || !table) {
+  if (input === null) {
     return;
   }
 
+  if (
+    input.trim() === ''
+  ) {
 
-  const total =
-    staff.reduce(
-      (a, s) =>
-        a + Number(s.salary || 0),
-      0
-    );
+    manualFixedIncome =
+      null;
 
-  const paid =
-    staff
-      .filter(s => s.salaryPaid)
-      .reduce(
-        (a, s) =>
-          a +
-          Number(s.salary || 0) -
-          Number(s.deductions || 0),
-        0
+  } else {
+
+    const val =
+      +input;
+
+    if (
+      !isNaN(val) &&
+      val >= 0
+    ) {
+
+      manualFixedIncome =
+        val;
+
+    } else {
+
+      alert(
+        'مبلغ غير صحيح'
       );
 
-
-  const remaining =
-    total - paid;
-
-
-  summary.innerHTML = `
-
-    <div class="stats-grid">
-
-      <div class="stat-card info">
-        <div class="stat-num">
-          ${fmt(total)} ج.م
-        </div>
-        <div class="stat-lbl">
-          إجمالي الرواتب
-        </div>
-      </div>
-
-      <div class="stat-card success">
-        <div class="stat-num">
-          ${fmt(paid)} ج.م
-        </div>
-        <div class="stat-lbl">
-          تم صرفه
-        </div>
-      </div>
-
-      <div class="stat-card warn">
-        <div class="stat-num">
-          ${fmt(remaining)} ج.م
-        </div>
-        <div class="stat-lbl">
-          متبقي
-        </div>
-      </div>
-
-    </div>
-
-  `;
-
-
-  table.innerHTML =
-    staff.length
-
-      ? staff.map((s, i) => {
-
-          const net =
-            Number(s.salary || 0) -
-            Number(s.deductions || 0);
-
-          return `
-
-            <tr>
-
-              <td>
-                <b>${escapeHtml(s.name)}</b>
-              </td>
-
-              <td>
-                ${escapeHtml(s.role || '—')}
-              </td>
-
-              <td>
-                ${fmt(s.salary)} ج.م
-              </td>
-
-              <td>
-
-                <input
-                  class="inline-input"
-                  type="number"
-                  value="${s.deductions || 0}"
-                  placeholder="خصم/سلفة"
-                  onchange="
-                    staff[${i}].deductions=+this.value || 0;
-                    save();
-                    renderSalary();
-                    renderYoussefSection();
-                  "
-                />
-
-              </td>
-
-              <td style="font-weight:700;color:var(--accent)">
-                ${fmt(net)} ج.م
-              </td>
-
-              <td>
-
-                <span class="badge ${
-                  s.salaryPaid
-                    ? 'badge-success'
-                    : 'badge-warn'
-                }">
-
-                  ${
-                    s.salaryPaid
-                      ? '✅ تم الصرف'
-                      : '⏳ لم يتم'
-                  }
-
-                </span>
-
-              </td>
-
-              <td>
-
-                <button
-                  class="btn btn-sm ${
-                    s.salaryPaid
-                      ? 'btn-ghost'
-                      : 'btn-success'
-                  }"
-                  onclick="toggleSalary(${i})"
-                >
-
-                  ${
-                    s.salaryPaid
-                      ? '↩️ إلغاء'
-                      : '💸 صرف'
-                  }
-
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join('')
-
-      : `
-        <tr>
-          <td colspan="7">
-            <div class="empty">
-              لا يوجد موظفون
-            </div>
-          </td>
-        </tr>
-      `;
-
-}
-
-
-function toggleSalary(i) {
-
-  if (!staff[i]) return;
-
-  staff[i].salaryPaid =
-    !staff[i].salaryPaid;
+      return;
+    }
+  }
 
   save();
 
-  renderSalary();
   renderYoussefSection();
-
 }
-
-
-/* =========================================================
-   YOUSSEF ARCHIVE
-========================================================= */
 
 function closeAndArchiveMonth() {
 
+  const password =
+    prompt(
+      '🔐 برجاء إدخال كلمة مرور كابتن يوسف لتأكيد إقفال الشهر وترحيله للأرشيف:'
+    );
+
   if (
-    !confirm(
-      '⚠️ هل أنت متأكد من إنهاء الشهر وترحيل البيانات للأرشيف؟'
-    )
+    password !==
+    (ADMIN.youssefPass || "mahmoud")
   ) {
+
+    if (password !== null) {
+
+      alert(
+        '❌ كلمة المرور غير صحيحة!'
+      );
+    }
+
     return;
   }
-
 
   const monthName =
     prompt(
@@ -4165,36 +4672,36 @@ function closeAndArchiveMonth() {
       new Date().toLocaleDateString(
         'ar-EG',
         {
-          month: 'long',
-          year: 'numeric'
+          month:'long',
+          year:'numeric'
         }
       )
     );
 
-
-  if (!monthName) return;
-
+  if (!monthName) {
+    return;
+  }
 
   const autoIncome =
     payments.reduce(
-      (a, p) =>
-        a + Number(p.amount || 0),
+      (a,p) =>
+        a +
+        Number(p.amount || 0),
       0
     );
 
   const totalIncome =
     manualFixedIncome !== null
-      ? Number(manualFixedIncome)
+      ? Number(manualFixedIncome || 0)
       : autoIncome;
-
 
   const totalExp =
     expenses.reduce(
-      (a, e) =>
-        a + Number(e.amount || 0),
+      (a,e) =>
+        a +
+        Number(e.amount || 0),
       0
     );
-
 
   const paidSalaries =
     staff
@@ -4202,30 +4709,30 @@ function closeAndArchiveMonth() {
         s => s.salaryPaid
       )
       .reduce(
-        (a, s) =>
+        (a,s) =>
           a +
           Number(s.salary || 0) -
           Number(s.deductions || 0),
         0
       );
 
-
   const grandTotalExp =
-    totalExp + paidSalaries;
-
+    totalExp +
+    paidSalaries;
 
   const monthIncomes =
     payments.map(
       p => ({
         name:
           p.memberName,
+
         sub:
           p.sub,
+
         amount:
-          p.amount
+          Number(p.amount || 0)
       })
     );
-
 
   const monthSalaries =
     staff
@@ -4236,14 +4743,15 @@ function closeAndArchiveMonth() {
         s => ({
           name:
             s.name,
+
           role:
             s.role,
+
           amount:
             Number(s.salary || 0) -
             Number(s.deductions || 0)
         })
       );
-
 
   const archiveRecord = {
 
@@ -4277,29 +4785,25 @@ function closeAndArchiveMonth() {
 
     archivedAt:
       today()
-
   };
-
 
   archives.push(
     archiveRecord
   );
 
-
   expenses = [];
   daysLog = [];
   payments = [];
-
   manualFixedIncome = null;
-
 
   staff.forEach(s => {
 
-    s.salaryPaid = false;
-    s.deductions = 0;
+    s.salaryPaid =
+      false;
 
+    s.deductions =
+      0;
   });
-
 
   save();
 
@@ -4310,151 +4814,162 @@ function closeAndArchiveMonth() {
   renderYoussefSection();
   renderFinance();
   renderDaysLog();
-
 }
-
 
 function renderYoussefArchive() {
 
   const q =
-    (
-      document.getElementById(
-        'archive-search'
-      )?.value || ''
-    ).trim().toLowerCase();
-
+    document.getElementById(
+      'archive-search'
+    )?.value || '';
 
   const list =
     archives.filter(a => {
 
-      if (!q) return true;
+      const title =
+        String(a.title || '');
+
+      const archivedAt =
+        String(a.archivedAt || '');
 
       return (
-        String(a.title || '')
-          .toLowerCase()
-          .includes(q) ||
-
-        String(a.archivedAt || '')
-          .includes(q)
+        !q ||
+        title.includes(q) ||
+        archivedAt.includes(q)
       );
-
     });
-
 
   const table =
     document.getElementById(
       'youssef-archive-table'
     );
 
-  if (!table) return;
+  if (!table) {
+    return;
+  }
 
+  if (!list.length) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty">
+            لا يوجد أرشيف مطابق للبحث
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
 
   table.innerHTML =
-    list.length
+    list
+      .slice()
+      .reverse()
+      .map(a => {
 
-      ? list
-          .slice()
-          .reverse()
-          .map(a => {
+        const realIdx =
+          archives.indexOf(a);
 
-            const realIdx =
-              archives.indexOf(a);
+        return `
+          <tr>
 
-            return `
+            <td>
+              <b>${a.title}</b>
+            </td>
 
-              <tr>
+            <td
+              style="
+                color:var(--success);
+                font-weight:700
+              "
+            >
+              ${fmt(a.income)} ج.م
+            </td>
 
-                <td>
-                  <b>${escapeHtml(a.title)}</b>
-                </td>
+            <td
+              style="
+                color:var(--danger);
+                font-weight:700
+              "
+            >
+              ${fmt(a.expenses)} ج.م
+            </td>
 
-                <td style="color:var(--success);font-weight:700">
-                  ${fmt(a.income)} ج.م
-                </td>
+            <td
+              style="
+                color:var(--accent);
+                font-weight:700
+              "
+            >
+              ${fmt(a.net)} ج.م
+            </td>
 
-                <td style="color:var(--danger);font-weight:700">
-                  ${fmt(a.expenses)} ج.م
-                </td>
+            <td>
+              ${a.archivedAt}
+            </td>
 
-                <td style="color:var(--accent);font-weight:700">
-                  ${fmt(a.net)} ج.م
-                </td>
+            <td>
 
-                <td>
-                  ${escapeHtml(a.archivedAt)}
-                </td>
+              <button
+                class="btn btn-sm btn-ghost"
+                onclick="viewArchiveDetails(${realIdx})"
+              >
+                👁️ التفاصيل
+              </button>
 
-                <td>
+              <button
+                class="btn btn-sm btn-ghost"
+                style="color:var(--danger)"
+                onclick="deleteArchiveItem(${realIdx})"
+              >
+                🗑️ حذف
+              </button>
 
-                  <button
-                    class="btn btn-sm btn-primary"
-                    onclick="viewArchiveDetails(${realIdx})"
-                  >
-                    📋 التفاصيل
-                  </button>
+            </td>
 
-                </td>
+          </tr>
+        `;
 
-              </tr>
-
-            `;
-
-          })
-          .join('')
-
-      : `
-        <tr>
-          <td colspan="6">
-            <div class="empty">
-              لا يوجد أرشيف مطابق للبحث
-            </div>
-          </td>
-        </tr>
-      `;
-
+      }).join('');
 }
-
 
 function viewArchiveDetails(idx) {
 
   const a =
     archives[idx];
 
-  if (!a) return;
+  if (!a) {
+    return;
+  }
 
   document.getElementById(
     'details-modal-title'
   ).textContent =
-    `📦 تفاصيل أرشيف ${a.title}`;
+    `📦 أرشيف: ${a.title}`;
 
+  let html = `
 
-  const incomes =
-    a.incomes || [];
-
-  const salaries =
-    a.salaries || [];
-
-  const details =
-    a.details || [];
-
-
-  document.getElementById(
-    'details-modal-body'
-  ).innerHTML = `
-
-    <div class="stats-grid">
+    <div
+      class="stats-grid"
+      style="margin-bottom:15px"
+    >
 
       <div class="stat-card success">
+
         <div class="stat-num">
           ${fmt(a.income)} ج.م
         </div>
 
         <div class="stat-lbl">
-          إجمالي الدخل
+          إجمالي دخل الشهر
         </div>
+
       </div>
 
       <div class="stat-card danger">
+
         <div class="stat-num">
           ${fmt(a.expenses)} ج.م
         </div>
@@ -4462,146 +4977,299 @@ function viewArchiveDetails(idx) {
         <div class="stat-lbl">
           إجمالي المنصرف
         </div>
+
       </div>
 
       <div class="stat-card info">
+
         <div class="stat-num">
           ${fmt(a.net)} ج.م
         </div>
 
         <div class="stat-lbl">
-          الصافي
+          الصافي (الأرباح)
         </div>
+
       </div>
 
     </div>
 
-
-    <div class="card">
-
-      <div class="card-title">
-        💵 الإيرادات
-      </div>
-
-      ${
-        incomes.length
-
-          ? incomes.map(x => `
-
-              <div class="att-row">
-
-                <div>
-                  <div class="att-name">
-                    ${escapeHtml(x.name)}
-                  </div>
-
-                  <div class="att-sub">
-                    ${escapeHtml(x.sub || '')}
-                  </div>
-                </div>
-
-                <b style="color:var(--success)">
-                  ${fmt(x.amount)} ج.م
-                </b>
-
-              </div>
-
-            `).join('')
-
-          : '<div class="empty">لا توجد إيرادات</div>'
-      }
-
+    <div class="card-title">
+      <span>
+        💵 تفاصيل الاشتراكات والمدفوعات
+      </span>
     </div>
 
+    <div class="table-wrap">
 
-    <div class="card">
+      <table>
 
-      <div class="card-title">
-        💸 المصروفات
-      </div>
+        <thead>
 
-      ${
-        details.length
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>الاشتراك</th>
+            <th>المبلغ</th>
+          </tr>
 
-          ? details.map(x => `
+        </thead>
 
-              <div class="att-row">
-
-                <div>
-                  <div class="att-name">
-                    ${escapeHtml(x.desc)}
-                  </div>
-
-                  <div class="att-sub">
-                    ${escapeHtml(x.cat || 'عام')}
-                  </div>
-                </div>
-
-                <b style="color:var(--danger)">
-                  ${fmt(x.amount)} ج.م
-                </b>
-
-              </div>
-
-            `).join('')
-
-          : '<div class="empty">لا توجد مصروفات</div>'
-      }
-
-    </div>
-
-
-    <div class="card">
-
-      <div class="card-title">
-        💰 الرواتب
-      </div>
-
-      ${
-        salaries.length
-
-          ? salaries.map(x => `
-
-              <div class="att-row">
-
-                <div>
-                  <div class="att-name">
-                    ${escapeHtml(x.name)}
-                  </div>
-
-                  <div class="att-sub">
-                    ${escapeHtml(x.role || '')}
-                  </div>
-                </div>
-
-                <b style="color:var(--danger)">
-                  ${fmt(x.amount)} ج.م
-                </b>
-
-              </div>
-
-            `).join('')
-
-          : '<div class="empty">لا توجد رواتب مصروفة</div>'
-      }
-
-    </div>
-
+        <tbody>
   `;
 
+  if (
+    !a.incomes ||
+    !a.incomes.length
+  ) {
 
-  document
-    .getElementById(
-      'modal-details'
-    )
-    .classList.add('open');
+    html += `
+      <tr>
+        <td colspan="4">
+          <div class="empty">
+            لا توجد تفاصيل مدفوعات مسجلة
+          </div>
+        </td>
+      </tr>
+    `;
 
+  } else {
+
+    a.incomes.forEach(
+      (inc,i) => {
+
+        html += `
+          <tr>
+
+            <td>
+              ${i + 1}
+            </td>
+
+            <td>
+              <b>${inc.name}</b>
+            </td>
+
+            <td>
+              ${inc.sub}
+            </td>
+
+            <td
+              style="
+                color:var(--success);
+                font-weight:700
+              "
+            >
+              ${fmt(inc.amount)} ج.م
+            </td>
+
+          </tr>
+        `;
+      }
+    );
+  }
+
+  html += `
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div
+      class="card-title"
+      style="margin-top:15px"
+    >
+      <span>
+        💸 المصروفات والمستهلكات والرواتب
+      </span>
+    </div>
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>#</th>
+            <th>البيان</th>
+            <th>الفئة / النوع</th>
+            <th>المبلغ</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+  `;
+
+  if (
+    a.salaries &&
+    a.salaries.length
+  ) {
+
+    a.salaries.forEach(
+      s => {
+
+        html += `
+          <tr>
+
+            <td>
+              #
+            </td>
+
+            <td>
+              مرتب:
+              <b>${s.name}</b>
+            </td>
+
+            <td>
+              رواتب
+            </td>
+
+            <td
+              style="
+                color:var(--danger);
+                font-weight:700
+              "
+            >
+              ${fmt(s.amount)} ج.م
+            </td>
+
+          </tr>
+        `;
+      }
+    );
+  }
+
+  if (
+    a.details &&
+    a.details.length
+  ) {
+
+    a.details.forEach(
+      (e,i) => {
+
+        html += `
+          <tr>
+
+            <td>
+              ${i + 1}
+            </td>
+
+            <td>
+              <b>${e.desc}</b>
+            </td>
+
+            <td>
+              ${e.cat || 'مستهلكات'}
+            </td>
+
+            <td
+              style="
+                color:var(--danger);
+                font-weight:700
+              "
+            >
+              ${fmt(e.amount)} ج.م
+            </td>
+
+          </tr>
+        `;
+      }
+    );
+  }
+
+  if (
+    (!a.salaries ||
+      !a.salaries.length)
+    &&
+    (!a.details ||
+      !a.details.length)
+  ) {
+
+    html += `
+      <tr>
+        <td colspan="4">
+          <div class="empty">
+            لا توجد مصروفات مسجلة بهذا الشهر
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  html += `
+
+        </tbody>
+
+      </table>
+
+    </div>
+  `;
+
+  document.getElementById(
+    'details-modal-body'
+  ).innerHTML =
+    html;
+
+  document.getElementById(
+    'modal-details'
+  ).classList.add('open');
 }
 
+function deleteArchiveItem(idx) {
 
-/* =========================================================
-   TRASH
-========================================================= */
+  const password =
+    prompt(
+      'أدخل كلمة المرور لتأكيد حذف هذا الأرشيف:'
+    );
+
+  if (
+    password === ADMIN.pass ||
+    password === ADMIN.youssefPass
+  ) {
+
+    const deleted =
+      archives.splice(
+        idx,
+        1
+      )[0];
+
+    if (!deleted) {
+      return;
+    }
+
+    trashBin.push({
+
+      type:
+        'أرشيف شهر',
+
+      item:
+        deleted,
+
+      deletedAt:
+        today()
+    });
+
+    save();
+
+    renderYoussefArchive();
+    renderTrashBin();
+
+  } else if (
+    password !== null
+  ) {
+
+    alert(
+      'كلمة المرور غير صحيحة!'
+    );
+  }
+}
+
+// =====================================================
+// TRASH BIN
+// =====================================================
 
 function renderTrashBin() {
 
@@ -4610,124 +5278,144 @@ function renderTrashBin() {
       'trash-table-body'
     );
 
-  if (!table) return;
+  if (!table) {
+    return;
+  }
 
+  if (!trashBin.length) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="empty">
+            سلة المهملات فارغة
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
 
   table.innerHTML =
-    trashBin.length
+    trashBin
+      .slice()
+      .reverse()
+      .map(
+        (t,i) => {
 
-      ? trashBin
-          .slice()
-          .reverse()
-          .map((x, reverseIdx) => {
+          const realIdx =
+            trashBin.indexOf(t);
 
-            const idx =
-              trashBin.length -
-              1 -
-              reverseIdx;
+          const item =
+            t.item || {};
 
-            return `
+          const desc =
+            item.name ||
+            item.desc ||
+            item.title ||
+            item.date ||
+            'عنصر محذوف';
 
-              <tr>
+          return `
+            <tr>
 
-                <td>
-                  ${reverseIdx + 1}
-                </td>
+              <td>
+                ${i + 1}
+              </td>
 
-                <td>
-                  <span class="badge badge-danger">
-                    ${escapeHtml(x.type)}
-                  </span>
-                </td>
+              <td>
+                <span class="badge badge-warn">
+                  ${t.type}
+                </span>
+              </td>
 
-                <td>
-                  ${escapeHtml(
-                    x.title || ''
-                  )}
-                </td>
+              <td>
+                <b>${desc}</b>
+              </td>
 
-                <td>
-                  ${escapeHtml(
-                    x.deletedAt || ''
-                  )}
-                </td>
+              <td>
+                ${t.deletedAt}
+              </td>
 
-                <td>
+              <td>
 
-                  <button
-                    class="btn btn-sm btn-success"
-                    onclick="restoreTrash(${idx})"
-                  >
-                    ♻️ استعادة
-                  </button>
+                <button
+                  class="btn btn-sm btn-success"
+                  onclick="restoreTrashItem(${realIdx})"
+                >
+                  ↩️ استعادة
+                </button>
 
-                  <button
-                    class="btn btn-sm btn-danger"
-                    onclick="deleteTrashForever(${idx})"
-                  >
-                    🗑️ حذف نهائي
-                  </button>
+                <button
+                  class="btn btn-sm btn-danger"
+                  onclick="permanentlyDeleteTrashItem(${realIdx})"
+                >
+                  ❌ حذف نهائي
+                </button>
 
-                </td>
+              </td>
 
-              </tr>
-
-            `;
-
-          })
-          .join('')
-
-      : `
-        <tr>
-          <td colspan="5">
-            <div class="empty">
-              سلة المهملات فارغة
-            </div>
-          </td>
-        </tr>
-      `;
-
+            </tr>
+          `;
+        }
+      ).join('');
 }
 
-
-function restoreTrash(idx) {
+function restoreTrashItem(idx) {
 
   const item =
     trashBin[idx];
 
-  if (!item) return;
-
+  if (!item) {
+    return;
+  }
 
   if (
-    item.type === 'عضو'
+    item.type ===
+    'عضو / اشتراك'
   ) {
 
     members.push(
-      item.data
+      item.item
     );
 
-  }
-
-  else if (
-    item.type === 'موظف'
+  } else if (
+    item.type ===
+    'موظف'
   ) {
 
     staff.push(
-      item.data
+      item.item
     );
 
-  }
-
-  else if (
-    item.type === 'مصروف'
+  } else if (
+    item.type ===
+    'مصروف'
   ) {
 
     expenses.push(
-      item.data
+      item.item
     );
 
-  }
+  } else if (
+    item.type ===
+    'سجل يوم'
+  ) {
 
+    daysLog.push(
+      item.item
+    );
+
+  } else if (
+    item.type ===
+    'أرشيف شهر'
+  ) {
+
+    archives.push(
+      item.item
+    );
+  }
 
   trashBin.splice(
     idx,
@@ -4741,360 +5429,28 @@ function restoreTrash(idx) {
   renderStaff();
   renderFinance();
   renderYoussefSection();
+  renderDaysLog();
 
+  alert(
+    '✅ تم استعادة العنصر بنجاح!'
+  );
 }
 
-
-function deleteTrashForever(idx) {
+function permanentlyDeleteTrashItem(idx) {
 
   if (
-    !confirm(
-      '⚠️ سيتم حذف العنصر نهائياً ولن يمكن استعادته. هل أنت متأكد؟'
+    confirm(
+      'هل أنت تأكد من حذف هذا العنصر نهائياً؟ لا يمكن التراجع عن هذه الخطوة.'
     )
   ) {
-    return;
-  }
 
-  trashBin.splice(
-    idx,
-    1
-  );
-
-  save();
-
-  renderTrashBin();
-
-}
-
-
-/* =========================================================
-   SETTINGS
-========================================================= */
-
-function renderSettings() {
-
-  document.getElementById(
-    'new-user'
-  ).value =
-    ADMIN.user;
-
-  document.getElementById(
-    'new-pass'
-  ).value = '';
-
-  document.getElementById(
-    'confirm-pass'
-  ).value = '';
-
-  document.getElementById(
-    'new-youssef-pass'
-  ).value = '';
-
-  document.getElementById(
-    'confirm-youssef-pass'
-  ).value = '';
-
-
-  let html = '';
-
-
-  for (
-    let key in SUB_PRICES
-  ) {
-
-    html += `
-
-      <div class="form-group" style="margin-bottom:10px">
-
-        <label>
-          سعر ${escapeHtml(
-            SUB_LABELS[key]
-          )}
-        </label>
-
-        <input
-          type="number"
-          id="price-${key}"
-          value="${SUB_PRICES[key]}"
-        />
-
-      </div>
-
-    `;
-
-  }
-
-
-  document.getElementById(
-    'prices-form'
-  ).innerHTML =
-    html;
-
-}
-
-
-function changeAdminCredentials() {
-
-  const u =
-    document.getElementById(
-      'new-user'
-    ).value.trim();
-
-  const p =
-    document.getElementById(
-      'new-pass'
-    ).value;
-
-  const cp =
-    document.getElementById(
-      'confirm-pass'
-    ).value;
-
-
-  if (!u) {
-
-    alert('❌ أدخل اسم المستخدم');
-
-    return;
-
-  }
-
-
-  if (p) {
-
-    if (p !== cp) {
-
-      alert(
-        '❌ كلمة المرور وتأكيدها غير متطابقين!'
-      );
-
-      return;
-
-    }
-
-    ADMIN.pass = p;
-
-  }
-
-
-  ADMIN.user = u;
-
-  save();
-
-  document.getElementById(
-    'top-admin'
-  ).textContent =
-    '👤 ' + ADMIN.user;
-
-  alert(
-    '✅ تم حفظ كلمة مرور وبيانات الأدمن بنجاح!'
-  );
-
-  renderSettings();
-
-}
-
-
-function changeYoussefCredentials() {
-
-  const yp =
-    document.getElementById(
-      'new-youssef-pass'
-    ).value;
-
-  const cyp =
-    document.getElementById(
-      'confirm-youssef-pass'
-    ).value;
-
-
-  if (!yp) {
-
-    alert(
-      '❌ أدخل كلمة المرور الجديدة لقسم كابتن يوسف'
+    trashBin.splice(
+      idx,
+      1
     );
 
-    return;
+    save();
 
+    renderTrashBin();
   }
-
-
-  if (yp !== cyp) {
-
-    alert(
-      '❌ كلمة المرور وتأكيدها لقسم كابتن يوسف غير متطابقين!'
-    );
-
-    return;
-
-  }
-
-
-  ADMIN.youssefPass =
-    yp;
-
-  save();
-
-  alert(
-    '✅ تم حفظ كلمة المرور المخصصة لقسم كابتن يوسف بنجاح!'
-  );
-
-  renderSettings();
-
 }
-
-
-function savePrices() {
-
-  for (
-    let key in SUB_PRICES
-  ) {
-
-    const input =
-      document.getElementById(
-        `price-${key}`
-      );
-
-    if (!input) continue;
-
-    const val =
-      Number(input.value);
-
-    if (
-      Number.isFinite(val) &&
-      val >= 0
-    ) {
-
-      SUB_PRICES[key] =
-        val;
-
-    }
-
-  }
-
-  save();
-
-  alert(
-    '✅ تم حفظ تعديلات الأسعار بنجاح!'
-  );
-
-  renderSettings();
-
-}
-
-
-/* =========================================================
-   CLEAR / RESET
-========================================================= */
-
-function clearAttendance() {
-
-  if (
-    !confirm(
-      '⚠️ هل تريد مسح سجل الحضور اليومي الحالي؟'
-    )
-  ) {
-    return;
-  }
-
-
-  const d =
-    today();
-
-
-  attLog =
-    attLog.filter(
-      x => x.date !== d
-    );
-
-
-  members.forEach(m => {
-
-    m.present = false;
-    m.checkIn = null;
-    m.checkOut = null;
-
-  });
-
-
-  staff.forEach(s => {
-
-    s.present = false;
-    s.checkIn = null;
-    s.checkOut = null;
-
-  });
-
-
-  save();
-
-  renderAttMembers();
-  renderAttStaff();
-  renderAttLog();
-  renderDashboard();
-
-}
-
-
-function resetAll() {
-
-  const confirmText =
-    prompt(
-      '⚠️ سيتم حذف جميع بيانات النظام نهائياً.\n\nاكتب DELETE للتأكيد:'
-    );
-
-  if (
-    confirmText !== 'DELETE'
-  ) {
-    return;
-  }
-
-
-  members = [];
-  staff = [];
-  attLog = [];
-  expenses = [];
-  archives = [];
-  daysLog = [];
-  trashBin = [];
-  payments = [];
-
-  manualFixedIncome =
-    null;
-
-
-  save();
-
-
-  alert(
-    '✅ تم إعادة ضبط بيانات النظام بالكامل.'
-  );
-
-
-  location.reload();
-
-}
-
-
-/* =========================================================
-   CLOSE MODALS BY CLICKING OUTSIDE
-========================================================= */
-
-document.addEventListener(
-  'click',
-  function (e) {
-
-    if (
-      e.target.classList.contains(
-        'modal-overlay'
-      )
-    ) {
-
-      e.target.classList.remove(
-        'open'
-      );
-
-    }
-
-  }
-);
